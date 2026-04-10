@@ -33,7 +33,7 @@
     .money.out { color: var(--out); font-weight: 600; }
     .summary-row { background: var(--summary); font-weight: 600; color: #92400e; border-left: 5px solid #f59e0b; }
     .btn-del { color: var(--out); background: none; width: auto; font-size: 1.2rem; margin: 0; cursor: pointer; }
-    .badge { font-size: 0.7rem; padding: 2px 5px; border-radius: 4px; background: #eee; margin-right: 5px; text-transform: uppercase; }
+    .badge { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; background: #01696f; color: white; margin-right: 8px; text-transform: uppercase; vertical-align: middle; }
   </style>
 </head>
 <body>
@@ -75,6 +75,7 @@
       <div class="grid">
         <input type="date" id="bDate" required>
         <select id="bPeriod">
+          <option value="giornaliero">Giornaliero</option>
           <option value="settimanale">Settimanale</option>
           <option value="mensile">Mensile</option>
         </select>
@@ -134,12 +135,12 @@
   let chart;
 
   function loadData() {
-    const saved = localStorage.getItem('bpm_ultimate_final_v8');
+    const saved = localStorage.getItem('bpm_ultimate_final_v9');
     if (saved) state = JSON.parse(saved);
   }
 
   function saveData() {
-    localStorage.setItem('bpm_ultimate_final_v8', JSON.stringify(state));
+    localStorage.setItem('bpm_ultimate_final_v9', JSON.stringify(state));
   }
 
   function initChart() {
@@ -190,7 +191,7 @@
     document.getElementById('rows').innerHTML = html;
 
     document.getElementById('budList').innerHTML = state.buds.map((b,i) => `
-      <div style="display:flex; justify-content:space-between; font-size:0.85rem; padding:5px; background:#f9fafb; margin-bottom:2px; border-radius:4px">
+      <div style="display:flex; justify-content:space-between; font-size:0.85rem; padding:6px; background:#f9fafb; margin-bottom:4px; border-radius:6px; border-left: 3px solid #01696f">
         <span><span class="badge">${b.period}</span> ${b.date} - ${b.cat}: <b>${fmt(b.amt)}</b></span>
         <button class="btn-del" onclick="delB(${i})">🗑️</button>
       </div>`).join('');
