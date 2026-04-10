@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BPM ULTIMATE DASHBOARD - FULL</title>
+  <title>BPM ULTIMATE - BUDGET PRO</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -44,8 +44,8 @@
     <div class="stats">
       <div class="stat"><div class="stat-label">Saldo Disponibile</div><div id="curBal" class="stat-value">0 €</div></div>
       <div class="stat"><div class="stat-label">Carta Risparmio</div><div id="savBal" class="stat-value">0 €</div></div>
-      <div class="stat"><div class="stat-label">Spese Previste</div><div id="budTot" class="stat-value">0 €</div></div>
-      <div class="stat"><div class="stat-label">Quota Mensile</div><div id="savMon" class="stat-value">0 €</div></div>
+      <div class="stat"><div class="stat-label">Spese Previste (Fisse)</div><div id="budTot" class="stat-value">0 €</div></div>
+      <div class="stat"><div class="stat-label">Quota Risparmio</div><div id="savMon" class="stat-value">0 €</div></div>
     </div>
     <div id="alertLow" class="alert-low">⚠️ ATTENZIONE: Saldo sotto 400 €</div>
   </div>
@@ -69,14 +69,30 @@
   </div>
 
   <div class="card">
-    <h2 class="section-title">SPESE PREVENTIVATE / FISSE</h2>
+    <h2 class="section-title">PIANIFICAZIONE BUDGET SETTIMANALE/MENSILE</h2>
+    <p style="font-size: 0.75rem; color: var(--subtle); margin-top: -0.5rem;">Imposta un obiettivo di spesa per lo storico.</p>
+    <form id="planForm">
+      <div class="grid">
+        <select id="pType">
+          <option value="Settimanale">Budget Settimanale</option>
+          <option value="Mensile">Budget Mensile</option>
+        </select>
+        <input type="number" id="pAmt" step="0.01" placeholder="Importo Target €" required>
+      </div>
+      <input type="text" id="pDesc" placeholder="Note (es. Spesa alimentare)">
+      <button type="submit" style="background: var(--summary); color: #92400e;">Aggiungi Budget allo Storico</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2 class="section-title">SPESE PREVENTIVATE (FISSE)</h2>
     <form id="budForm">
       <div class="grid">
         <input type="date" id="bDate" required>
         <input type="number" id="bAmt" step="0.01" placeholder="Importo €" required>
       </div>
       <input type="text" id="bCat" placeholder="Descrizione (es. Affitto)" required>
-      <button type="submit" class="primary">Aggiungi alle Previsioni</button>
+      <button type="submit" class="primary">Prenota Spesa</button>
     </form>
     <div id="budList" style="margin-top:0.8rem"></div>
   </div>
@@ -84,11 +100,11 @@
   <div class="card">
     <h2 class="section-title">CARTA RISPARMIO</h2>
     <div class="grid">
-      <input type="number" id="sSet" placeholder="Quota mensile €">
+      <input type="number" id="sSet" placeholder="Quota €">
       <button class="save" onclick="setQuota()">Salva Quota</button>
     </div>
     <div class="grid" style="margin-top:0.5rem">
-      <button class="save" onclick="execSave()">Trasferisci a Risparmio</button>
+      <button class="save" onclick="execSave()">Invia a Risparmio</button>
       <button class="revoke" onclick="revokeSave()">Revoca Importo</button>
     </div>
   </div>
@@ -104,20 +120,20 @@
   const fmt = n => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
   
   let state = {
-    movs: [], // Movimenti reali
-    buds: [], // Spese preventive
+    movs: [], // Movimenti reali e Budget inseriti
+    buds: [], // Spese preventive fisse
     sBal: 0, sQuo: 0
   };
 
   let chart;
 
   function loadData() {
-    const saved = localStorage.getItem('bpm_ultimate_final_v4');
+    const saved = localStorage.getItem('bpm_ultimate_v6');
     if (saved) state = JSON.parse(saved);
   }
 
   function saveData() {
-    localStorage.setItem('bpm_ultimate_final_v4', JSON.stringify(state));
+    localStorage.setItem('bpm_ultimate_v6', JSON.stringify(state));
   }
 
   function initChart() {
@@ -130,9 +146,11 @@
   }
 
   function render() {
-    // Calcoli
-    const tIn = state.movs.filter(m => m.type==='entrata').reduce((s,m)=>s+m.amt, 0);
-    const tOut = state.movs.filter(m => m.type==='uscita').reduce((s,m)=>s+m.amt, 0);
+    // Filtro per calcolare il saldo solo sui movimenti reali (non i target di budget)
+    const realMovs = state.movs.filter(m => !m.isBudgetPlan);
+    
+    const tIn = realMovs.filter(m => m.type==='entrata').reduce((s,m)=>s+m.amt, 0);
+    const tOut = realMovs.filter(m => m.type==='uscita').reduce((s,m)=>s+m.amt, 0);
     const tBud = state.buds.reduce((s,b)=>s+b.amt, 0);
     const realBal = tIn - tOut - tBud;
 
@@ -142,27 +160,35 @@
     document.getElementById('savMon').textContent = fmt(state.sQuo);
     document.getElementById('alertLow').style.display = realBal < 400 ? 'block' : 'none';
 
-    // Riepilogative automatiche (Settimanali/Mensili)
+    // Riepiloghi Automatici
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7*24*60*60*1000).toISOString().slice(0,10);
     const monthStart = now.toISOString().slice(0,7) + "-01";
-    const wSum = state.movs.filter(m => m.type==='uscita' && m.date >= weekAgo).reduce((s,m)=>s+m.amt, 0);
-    const mSum = state.movs.filter(m => m.type==='uscita' && m.date >= monthStart).reduce((s,m)=>s+m.amt, 0);
+    const wSum = realMovs.filter(m => m.type==='uscita' && m.date >= weekAgo).reduce((s,m)=>s+m.amt, 0);
+    const mSum = realMovs.filter(m => m.type==='uscita' && m.date >= monthStart).reduce((s,m)=>s+m.amt, 0);
 
-    // Render Storico
-    let html = state.movs.map((m,i) => `
-      <tr>
+    // Storico
+    let html = state.movs.map((m,i) => {
+      if(m.isBudgetPlan) {
+        return `<tr class="summary-row">
+          <td><small>${m.date}</small><br>🎯 <b>${m.cat}</b></td>
+          <td style="text-align:right">Budget: ${fmt(m.amt)}</td>
+          <td><button class="btn-del" onclick="delM(${i})">×</button></td>
+        </tr>`;
+      }
+      return `<tr>
         <td><small>${m.date}</small><br><b>${m.cat}</b></td>
         <td class="money ${m.type}" style="text-align:right">${m.type==='entrata'?'+':'-'} ${fmt(m.amt)}</td>
         <td style="width:30px"><button class="btn-del" onclick="delM(${i})">×</button></td>
-      </tr>`).reverse().join('');
+      </tr>`;
+    }).reverse().join('');
     
-    // Righe riepilogative fisse
-    if(wSum > 0) html += `<tr class="summary-row"><td colspan="3">📆 Riepilogo Settimanale (Uscite): ${fmt(wSum)}</td></tr>`;
-    if(mSum > 0) html += `<tr class="summary-row"><td colspan="3">📅 Riepilogo Mensile (Uscite): ${fmt(mSum)}</td></tr>`;
+    // Righe riepilogative automatiche
+    html += `<tr style="background:#f8fafc; font-style: italic;"><td colspan="3">Uscite reali ultimi 7gg: ${fmt(wSum)}</td></tr>`;
+    html += `<tr style="background:#f8fafc; font-style: italic;"><td colspan="3">Uscite reali mese: ${fmt(mSum)}</td></tr>`;
     document.getElementById('rows').innerHTML = html;
 
-    // Render Lista Budget
+    // Lista Fisse
     document.getElementById('budList').innerHTML = state.buds.map((b,i) => `
       <div style="display:flex; justify-content:space-between; font-size:0.85rem; padding:5px; background:#f9fafb; margin-bottom:2px; border-radius:4px">
         <span>${b.date} - ${b.cat}: <b>${fmt(b.amt)}</b></span>
@@ -174,11 +200,11 @@
   }
 
   function updateChart() {
-    const sorted = [...state.movs].sort((a,b)=>new Date(a.date)-new Date(b.date));
+    const realMovs = state.movs.filter(m => !m.isBudgetPlan).sort((a,b)=>new Date(a.date)-new Date(b.date));
     let current = 0;
     const labels = [];
     const values = [];
-    sorted.forEach(m => {
+    realMovs.forEach(m => {
       current += (m.type === 'entrata' ? m.amt : -m.amt);
       labels.push(m.date);
       values.push(current);
@@ -188,18 +214,35 @@
     chart.update();
   }
 
-  // Eventi
+  // Submit Movimento
   document.getElementById('movForm').onsubmit = e => {
     e.preventDefault();
     state.movs.push({
       date: document.getElementById('mDate').value,
       type: document.getElementById('mType').value,
       amt: Number(document.getElementById('mAmt').value),
-      cat: document.getElementById('mCat').value
+      cat: document.getElementById('mCat').value,
+      isBudgetPlan: false
     });
     render(); e.target.reset(); setDefaultDates();
   };
 
+  // Submit Budget Plan (Settimanale/Mensile)
+  document.getElementById('planForm').onsubmit = e => {
+    e.preventDefault();
+    const type = document.getElementById('pType').value;
+    const desc = document.getElementById('pDesc').value;
+    state.movs.push({
+      date: new Date().toISOString().slice(0,10),
+      type: 'info',
+      amt: Number(document.getElementById('pAmt').value),
+      cat: `TARGET ${type.toUpperCase()}: ${desc}`,
+      isBudgetPlan: true
+    });
+    render(); e.target.reset();
+  };
+
+  // Submit Spesa Preventivata
   document.getElementById('budForm').onsubmit = e => {
     e.preventDefault();
     state.buds.push({
@@ -211,20 +254,16 @@
   };
 
   function setQuota() { state.sQuo = Number(document.getElementById('sSet').value); render(); }
-  
   function execSave() {
     if(state.sQuo <= 0) return alert("Imposta una quota!");
-    state.movs.push({ date: new Date().toISOString().slice(0,10), type: 'uscita', amt: state.sQuo, cat: 'Trasferimento Risparmio' });
-    state.sBal += state.sQuo;
-    render();
+    state.movs.push({ date: new Date().toISOString().slice(0,10), type: 'uscita', amt: state.sQuo, cat: 'Trasferimento Risparmio', isBudgetPlan: false });
+    state.sBal += state.sQuo; render();
   }
-
   function revokeSave() {
     const amt = Number(document.getElementById('sSet').value) || state.sQuo;
-    if (amt <= 0 || state.sBal < amt) return alert("Importo non disponibile nel risparmio");
-    state.movs.push({ date: new Date().toISOString().slice(0,10), type: 'entrata', amt: amt, cat: 'Revoca da Risparmio' });
-    state.sBal -= amt;
-    render();
+    if (amt <= 0 || state.sBal < amt) return alert("Fondi insufficienti nel risparmio");
+    state.movs.push({ date: new Date().toISOString().slice(0,10), type: 'entrata', amt: amt, cat: 'Revoca Risparmio', isBudgetPlan: false });
+    state.sBal -= amt; render();
   }
 
   function delM(i) { state.movs.splice(i,1); render(); }
