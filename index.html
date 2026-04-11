@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BPM FINANCIAL HUB - V58 FULL EDIT & CASH</title>
+  <title>BPM FINANCIAL HUB - V59 CASH STABILITY</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -75,14 +75,14 @@
   </div>
 
   <div class="card">
-    <h2 class="section-title">ANALISI SALDO VS DISPONIBILITÀ</h2>
+    <h2 class="section-title">ANALISI SALDI</h2>
     <canvas id="balanceChart" height="180"></canvas>
   </div>
 
   <div id="detailModal" class="modal" onclick="closeModal()">
     <div class="modal-content" onclick="event.stopPropagation()">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-        <h3 id="modalTitle" style="margin:0">Dettaglio</h3>
+        <h3 id="modalTitle" style="margin:0">Riepilogo</h3>
         <button onclick="closeModal()">X</button>
       </div>
       <div id="modalBody"></div>
@@ -94,7 +94,7 @@
     <form id="movForm">
       <input type="date" id="mDate" required>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:5px 0">
-        <select id="mSource"><option value="banca">💳 Banca</option><option value="contanti">💵 Cassa Contante</option></select>
+        <select id="mSource" id="mSource"><option value="banca">💳 Banca</option><option value="contanti">💵 Contanti</option></select>
         <select id="mType"><option value="uscita">Uscita (-)</option><option value="entrata">Entrata (+)</option></select>
       </div>
       <input type="number" id="mAmt" step="0.01" placeholder="Importo €" required style="margin-bottom:5px">
@@ -118,12 +118,12 @@
   </div>
 
   <div class="card">
-    <h2 class="section-title">IMPOSTAZIONI HUB</h2>
+    <h2 class="section-title">IMPOSTAZIONI</h2>
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px">
       <div><label style="font-size:0.7rem">Stipendio (€)</label><input type="number" id="baseSalary"></div>
-      <div><label style="font-size:0.7rem">Soglia Alert (€)</label><input type="number" id="alertLimit" value="400"></div>
+      <div><label style="font-size:0.7rem">Soglia Allerta (€)</label><input type="number" id="alertLimit" value="400"></div>
     </div>
-    <button onclick="saveConfig()" class="primary" style="margin-top:10px">Aggiorna</button>
+    <button onclick="saveConfig()" class="primary" style="margin-top:10px">Aggiorna Parametri</button>
   </div>
 
   <div class="card">
@@ -131,7 +131,7 @@
     <table class="table"><tbody id="rows"></tbody></table>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:1rem">
       <button onclick="exportData()">Backup</button>
-      <button onclick="document.getElementById('importFile').click()">Carica</button>
+      <button onclick="document.getElementById('importFile').click()">Importa</button>
     </div>
     <input type="file" id="importFile" style="display:none" onchange="importData(event)">
   </div>
@@ -146,12 +146,12 @@
   let chart;
 
   function loadData() {
-    const saved = localStorage.getItem('bpm_v58');
+    const saved = localStorage.getItem('bpm_v59');
     if (saved) state = JSON.parse(saved);
     document.getElementById('baseSalary').value = state.stipendioBase || 0;
     document.getElementById('alertLimit').value = state.alertLimit || 400;
   }
-  function saveData() { localStorage.setItem('bpm_v58', JSON.stringify(state)); }
+  function saveData() { localStorage.setItem('bpm_v59', JSON.stringify(state)); }
 
   function manageFunds(action) {
     let amt = prompt("Importo:");
@@ -170,24 +170,31 @@
   function getCalculatedData() {
     const today = new Date().toISOString().slice(0,10);
     const curMonth = today.slice(0,7);
+    
+    // BANCA
     const bancaBal = state.movs.filter(m => m.date <= today && m.source === 'banca').reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
+    
+    // CASSA (Corretto: filtra per sorgente 'contanti')
     const cashBal = state.movs.filter(m => m.source === 'contanti' && m.date <= today).reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
+    
+    // DISPONIBILE
     const haStip = state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.toLowerCase().includes('stipendio') && m.type === 'entrata');
     const stipDaAgg = haStip ? 0 : (state.stipendioBase || 0);
-
+    
     let fisseRes = 0;
+    let fisseList = [];
     state.buds.forEach(f => {
       const pagata = state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.toLowerCase().includes(f.cat.toLowerCase()));
-      if(!pagata) fisseRes += f.amt;
+      if(!pagata) { fisseRes += f.amt; fisseList.push(f); }
     });
 
-    return { bancaBal, cashBal, avail: bancaBal + stipDaAgg - fisseRes, fisseRes };
+    return { bancaBal, cashBal, avail: bancaBal + stipDaAgg - fisseRes, fisseRes, fisseList, stipDaAgg };
   }
 
   function toggleEdit(i) { editingId = (editingId === i) ? null : i; render(); }
   function saveEdit(i) {
-    const newAmt = Number(document.getElementById(`edit-${i}`).value);
-    if(!isNaN(newAmt)) state.movs[i].amt = newAmt;
+    const val = Number(document.getElementById(`edit-${i}`).value);
+    if(!isNaN(val)) state.movs[i].amt = val;
     editingId = null; render();
   }
 
@@ -253,18 +260,42 @@
 
   function openModal(t, b) { document.getElementById('modalTitle').innerText = t; document.getElementById('modalBody').innerHTML = b; document.getElementById('detailModal').style.display = 'flex'; }
   function closeModal() { document.getElementById('detailModal').style.display = 'none'; }
-  function showActDetail() { openModal("Hub Banca 💳", "Totale movimenti bancari reali."); }
-  function showDispDetail() { openModal("Disponibile 🏁", "Saldo + Stipendio previsto - Fisse residue."); }
-  function showSavDetail() { openModal("Risparmio 💎", `Fondo totale: ${fmt(state.sBal)}`); }
-  function showCashDetail() { openModal("Cassa Contante 💵", "Denaro fisico calcolato su prelievi e uscite cash."); }
+  
+  function showActDetail() { 
+    const list = state.movs.filter(m => m.source === 'banca').sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,10);
+    let h = `Ultime operazioni banca:<br><br>` + list.map(m => `<div style="font-size:0.8rem">${m.cat}: <span class="money ${m.type}">${m.type==='entrata'?'+':'-'}${fmt(m.amt)}</span></div>`).join('');
+    openModal("Dettaglio Hub Banca 💳", h); 
+  }
+  
+  function showDispDetail() { 
+    const d = getCalculatedData();
+    let h = `<b>SITUAZIONE FINE MESE:</b><hr>`;
+    if(d.stipDaAgg > 0) h += `Stipendio previsto: <span class="money in">+${fmt(d.stipDaAgg)}</span><br>`;
+    h += `Fisse residue: <br>` + (d.fisseList.length ? d.fisseList.map(f => `<div>${f.cat}: <span class="money out">-${fmt(f.amt)}</span></div>`).join('') : "Nessuna") + `<hr><b>Previsto: ${fmt(d.avail)}</b>`;
+    openModal("Dettaglio Disponibile 🏁", h); 
+  }
+
+  function showSavDetail() { openModal("Dettaglio Risparmio 💎", `Saldo totale accumulato: ${fmt(state.sBal)}<br><br>Puoi caricare o revocare fondi usando i tasti rapidi sulla tab.`); }
+  
+  function showCashDetail() { 
+    const list = state.movs.filter(m => m.source === 'contanti').sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,10);
+    let h = `Ultime operazioni contanti:<br><br>` + (list.length ? list.map(m => `<div style="font-size:0.8rem">${m.cat}: <span class="money ${m.type}">${m.type==='entrata'?'+':'-'}${fmt(m.amt)}</span></div>`).join('') : "Nessun movimento registrato.");
+    openModal("Dettaglio Cassa 💵", h); 
+  }
   
   function saveConfig() { state.stipendioBase = Number(document.getElementById('baseSalary').value); state.alertLimit = Number(document.getElementById('alertLimit').value); saveData(); render(); }
   function delM(i) { if(confirm("Eliminare movimento?")) { state.movs.splice(i,1); render(); } }
-  function delB(i) { if(confirm("Eliminare spesa fissa?")) { state.buds.splice(i,1); render(); } }
+  function delB(i) { if(confirm("Eliminare fissa?")) { state.buds.splice(i,1); render(); } }
 
   document.getElementById('movForm').onsubmit = e => {
     e.preventDefault();
-    state.movs.push({ date: document.getElementById('mDate').value, source: document.getElementById('mSource').value, type: document.getElementById('mType').value, amt: Number(document.getElementById('mAmt').value), cat: document.getElementById('mCat').value });
+    state.movs.push({ 
+        date: document.getElementById('mDate').value, 
+        source: document.getElementById('mSource').value, 
+        type: document.getElementById('mType').value, 
+        amt: Number(document.getElementById('mAmt').value), 
+        cat: document.getElementById('mCat').value 
+    });
     render(); e.target.reset();
   };
   document.getElementById('budForm').onsubmit = e => {
@@ -274,7 +305,7 @@
   };
 
   function exportData() {
-    const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'bpm_v58.json'; a.click();
+    const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'bpm_v59.json'; a.click();
   }
   function importData(e) {
     const r = new FileReader(); r.onload = x => { state = JSON.parse(x.target.result); render(); }; r.readAsText(e.target.files[0]);
