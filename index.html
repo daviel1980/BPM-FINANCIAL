@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BPM FINANCIAL HUB - V27 INTERACTIVE FIX</title>
+  <title>BPM FINANCIAL HUB - V28 PROJECTION FIX</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -47,7 +47,7 @@
 
   <div class="card">
     <h2 class="section-title">PROIEZIONE PROSSIMI 6 MESI</h2>
-    <table class="table"><thead style="background:#f1f5f9"><tr><th>Mese</th><th>Entrate</th><th>Fisse</th><th>Saldo Finale</th></tr></thead><tbody id="forecastBody"></tbody></table>
+    <table class="table"><thead style="background:#f1f5f9"><tr><th>Mese</th><th>Entrate stim.</th><th>Uscite stim.</th><th>Saldo stim.</th></tr></thead><tbody id="forecastBody"></tbody></table>
   </div>
 
   <div id="detailModal" class="modal" onclick="this.style.display='none'">
@@ -112,12 +112,12 @@
   let state = { movs: [], buds: [], sBal: 0 };
 
   function loadData() {
-    const saved = localStorage.getItem('bpm_v27');
+    const saved = localStorage.getItem('bpm_v28');
     if (saved) state = JSON.parse(saved);
   }
 
   function saveData() {
-    localStorage.setItem('bpm_v27', JSON.stringify(state));
+    localStorage.setItem('bpm_v28', JSON.stringify(state));
   }
 
   function getCalculatedData() {
@@ -138,6 +138,7 @@
       );
 
       if (f.period === 'singola') {
+        // Mostriamo nel "residuo" solo se la data è futura/oggi e non pagata
         if (f.date >= todayStr && f.date.slice(0,7) === currentMonth && !giaPagataMese) {
           totalFisseResidue += f.amt;
           fisseDettaglio.push(f);
@@ -189,19 +190,26 @@
     for(let i=0; i<6; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
       const mStr = d.toISOString().slice(0,7);
-      const singole = state.buds.filter(b => b.period === 'singola' && b.date.slice(0,7) === mStr).reduce((s,b)=>s+b.amt,0);
-      running = running + stipendio - ricorrenti - singole;
-      html += `<tr><td>${d.toLocaleString('it-IT',{month:'long',year:'numeric'})}</td><td class="money in">+ ${fmt(stipendio)}</td><td class="money out">- ${fmt(ricorrenti+singole)}</td><td style="font-weight:bold">${fmt(running)}</td></tr>`;
+      
+      // LOGICA AGGIORNATA: Conta tutte le singole programmate per questo mese specifico
+      const singoleDelMese = state.buds
+        .filter(b => b.period === 'singola' && b.date.slice(0,7) === mStr)
+        .reduce((s, b) => s + b.amt, 0);
+
+      const totalOutMese = ricorrenti + singoleDelMese;
+      running = running + stipendio - totalOutMese;
+      
+      html += `<tr><td>${d.toLocaleString('it-IT',{month:'long',year:'numeric'})}</td><td class="money in">+ ${fmt(stipendio)}</td><td class="money out">- ${fmt(totalOutMese)}</td><td style="font-weight:bold">${fmt(running)}</td></tr>`;
     }
     document.getElementById('forecastBody').innerHTML = html;
   }
 
   function openModal(t, b) { document.getElementById('modalTitle').innerText = t; document.getElementById('modalBody').innerHTML = b; document.getElementById('detailModal').style.display = 'flex'; }
-  function showActDetail() { openModal("Saldo Attuale", "Basato sui movimenti registrati fino a oggi."); }
+  function showActDetail() { openModal("Saldo Attuale", "Saldo reale basato sui movimenti fino ad oggi."); }
   function showDispDetail() { 
     const data = getCalculatedData();
     const h = data.fisseDettaglio.length ? '<table class="table">' + data.fisseDettaglio.map(f => `<tr><td>${f.cat} <small>(${f.period})</small></td><td style="text-align:right" class="money out">-${fmt(f.amt)}</td></tr>`).join('') + '</table>' : 'Nessuna spesa pendente.';
-    openModal("Riepilogo Disponibilità", `Saldo attuale meno le seguenti voci:<br><br>${h}`);
+    openModal("Riepilogo Disponibilità", `Saldo attuale meno scadenze non ancora registrate nello storico:<br><br>${h}`);
   }
   function showSavDetail() { openModal("Risparmio", `Accumulo totale: ${fmt(state.sBal)}`); }
   function showFisseDetail() { 
