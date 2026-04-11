@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BPM FINANCIAL HUB - MOBILE PRO</title>
+  <title>BPM FINANCIAL HUB - SMART DATE</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -44,7 +44,7 @@
 
   <div class="card">
     <div class="stats">
-      <div class="stat"><div class="stat-label">Saldo Attuale</div><div id="actBal" class="stat-value">0 €</div></div>
+      <div class="stat"><div class="stat-label">Saldo Attuale (Oggi)</div><div id="actBal" class="stat-value">0 €</div></div>
       <div class="stat"><div class="stat-label">Saldo Disponibile</div><div id="curBal" class="stat-value">0 €</div></div>
       <div class="stat"><div class="stat-label">Carta Risparmio</div><div id="savBal" class="stat-value">0 €</div></div>
       <div class="stat"><div class="stat-label">Fisse Previste</div><div id="budTot" class="stat-value">0 €</div></div>
@@ -136,15 +136,14 @@
   let chart;
 
   function loadData() {
-    const saved = localStorage.getItem('bpm_mobile_v11');
+    const saved = localStorage.getItem('bpm_mobile_v12');
     if (saved) state = JSON.parse(saved);
   }
 
   function saveData() {
-    localStorage.setItem('bpm_mobile_v11', JSON.stringify(state));
+    localStorage.setItem('bpm_mobile_v12', JSON.stringify(state));
   }
 
-  // FUNZIONI DI BACKUP MOBILE
   function exportData() {
     const dataStr = JSON.stringify(state);
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
@@ -161,8 +160,8 @@
       try {
         state = JSON.parse(e.target.result);
         render();
-        alert("Dati importati correttamente!");
-      } catch (err) { alert("Errore nel file di backup!"); }
+        alert("Dati importati!");
+      } catch (err) { alert("Errore file!"); }
     };
     reader.readAsText(event.target.files[0]);
   }
@@ -171,16 +170,21 @@
     const ctx = document.getElementById('balanceChart').getContext('2d');
     chart = new Chart(ctx, {
       type: 'line',
-      data: { labels: [], datasets: [{ label: 'Saldo (€)', data: [], borderColor: '#01696f', tension: 0.3, fill: true, backgroundColor: 'rgba(1, 105, 111, 0.05)', pointRadius: 4 }] },
+      data: { labels: [], datasets: [{ label: 'Saldo Storico (€)', data: [], borderColor: '#01696f', tension: 0.3, fill: true, backgroundColor: 'rgba(1, 105, 111, 0.05)', pointRadius: 4 }] },
       options: { responsive: true, scales: { x: { ticks: { font: { size: 10 } } } } }
     });
   }
 
   function render() {
+    const today = new Date().toISOString().slice(0,10);
     const realMovs = state.movs.filter(m => !m.isBudgetPlan);
-    const tIn = realMovs.filter(m => m.type==='entrata').reduce((s,m)=>s+m.amt, 0);
-    const tOut = realMovs.filter(m => m.type==='uscita').reduce((s,m)=>s+m.amt, 0);
+    
+    // LOGICA CORRETTA: Saldo attuale filtra solo i movimenti fino a OGGI
+    const movsUntilToday = realMovs.filter(m => m.date <= today);
+    const tIn = movsUntilToday.filter(m => m.type==='entrata').reduce((s,m)=>s+m.amt, 0);
+    const tOut = movsUntilToday.filter(m => m.type==='uscita').reduce((s,m)=>s+m.amt, 0);
     const actualBal = tIn - tOut;
+
     const tBud = state.buds.reduce((s,b)=>s+b.amt, 0);
     const availBal = actualBal - tBud;
 
@@ -190,11 +194,12 @@
     document.getElementById('budTot').textContent = fmt(tBud);
     document.getElementById('alertLow').style.display = availBal < 400 ? 'block' : 'none';
 
+    // Riepiloghi reali
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7*24*60*60*1000).toISOString().slice(0,10);
     const monthStart = now.toISOString().slice(0,7) + "-01";
-    const wSum = realMovs.filter(m => m.type==='uscita' && m.date >= weekAgo).reduce((s,m)=>s+m.amt, 0);
-    const mSum = realMovs.filter(m => m.type==='uscita' && m.date >= monthStart).reduce((s,m)=>s+m.amt, 0);
+    const wSum = realMovs.filter(m => m.type==='uscita' && m.date >= weekAgo && m.date <= today).reduce((s,m)=>s+m.amt, 0);
+    const mSum = realMovs.filter(m => m.type==='uscita' && m.date >= monthStart && m.date <= today).reduce((s,m)=>s+m.amt, 0);
 
     let html = state.movs.map((m,i) => {
       if(m.isBudgetPlan) {
@@ -203,8 +208,8 @@
       return `<tr><td><small>${m.date}</small><br><b>${m.cat}</b></td><td class="money ${m.type}" style="text-align:right">${m.type==='entrata'?'+':'-'} ${fmt(m.amt)}</td><td style="width:30px"><button class="btn-del" onclick="delM(${i})">×</button></td></tr>`;
     }).reverse().join('');
     
-    html += `<tr style="background:#f8fafc; font-style: italic;"><td colspan="3">Uscite 7gg: ${fmt(wSum)}</td></tr>`;
-    html += `<tr style="background:#f8fafc; font-style: italic;"><td colspan="3">Uscite mese: ${fmt(mSum)}</td></tr>`;
+    html += `<tr style="background:#f8fafc; font-style: italic;"><td colspan="3">Uscite reali effettive 7gg: ${fmt(wSum)}</td></tr>`;
+    html += `<tr style="background:#f8fafc; font-style: italic;"><td colspan="3">Uscite reali effettive mese: ${fmt(mSum)}</td></tr>`;
     document.getElementById('rows').innerHTML = html;
 
     document.getElementById('budList').innerHTML = state.buds.map((b,i) => `
@@ -252,7 +257,7 @@
 
   function setQuota() { state.sQuo = Number(document.getElementById('sSet').value); render(); }
   function execSave() {
-    if(state.sQuo <= 0) return alert("Quota non valida");
+    if(state.sQuo <= 0) return alert("Quota errata");
     state.movs.push({ date: new Date().toISOString().slice(0,10), type: 'uscita', amt: state.sQuo, cat: 'Risparmio', isBudgetPlan: false });
     state.sBal += state.sQuo; render();
   }
@@ -265,7 +270,7 @@
 
   function delM(i) { state.movs.splice(i,1); render(); }
   function delB(i) { state.buds.splice(i,1); render(); }
-  function resetData() { if(confirm("Cancellare tutto?")) { localStorage.clear(); location.reload(); } }
+  function resetData() { if(confirm("Resettare?")) { localStorage.clear(); location.reload(); } }
   function setDefaultDates() { document.getElementById('mDate').value = document.getElementById('bDate').value = new Date().toISOString().slice(0,10); }
 
   loadData(); setDefaultDates(); initChart(); render();
