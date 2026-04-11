@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BPM FINANCIAL HUB - STABLE CHRONO</title>
+  <title>BPM FINANCIAL HUB - V23 FULL PREVISION</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -24,17 +24,15 @@
     
     .modal { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; padding: 1rem; }
     .modal-content { background: white; padding: 1.5rem; border-radius: 1rem; max-width: 500px; width: 100%; max-height: 80vh; overflow-y: auto; }
-    .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1rem; }
-
+    
     .section-title { margin-bottom: 0.8rem; font-size: 1rem; font-weight: 600; border-bottom: 2px solid var(--accent); padding-bottom: 0.3rem; display: inline-block; }
     input, select, button { border-radius: 0.5rem; border: 1px solid var(--border); padding: 0.6rem; font-size: 0.875rem; width: 100%; box-sizing: border-box; }
     button.primary { background: var(--accent); color: #fff; border: none; font-weight: 600; }
     
     .table { width: 100%; border-collapse: collapse; }
-    .table td, .table th { padding: 0.6rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+    .table td, .table th { padding: 0.6rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; text-align: left; }
     .money.in { color: var(--in); font-weight: 600; }
     .money.out { color: var(--out); font-weight: 600; }
-    
     .forecast-row { background: #f0f9ff; font-weight: bold; color: #0369a1; }
     .btn-icon { background: none; border: none; font-size: 1.1rem; cursor: pointer; padding: 0; width: auto; }
     .badge { font-size: 0.6rem; padding: 2px 5px; border-radius: 4px; background: #01696f; color: white; text-transform: uppercase; }
@@ -47,29 +45,24 @@
 
   <div class="card">
     <div class="stats">
-      <div class="stat" onclick="showActDetail()">
-        <div class="stat-label">Saldo Attuale (Oggi)</div><div id="actBal" class="stat-value">0 €</div>
-      </div>
-      <div class="stat" onclick="showDispDetail()">
-        <div class="stat-label">Saldo Disponibile</div><div id="curBal" class="stat-value">0 €</div>
-      </div>
-      <div class="stat" onclick="showSavDetail()">
-        <div class="stat-label">Carta Risparmio</div><div id="savBal" class="stat-value">0 €</div>
-      </div>
-      <div class="stat" onclick="showFisseDetail()">
-        <div class="stat-label">Fisse Totali</div><div id="budTot" class="stat-value">0 €</div>
-      </div>
+      <div class="stat" onclick="showActDetail()"><div class="stat-label">Saldo Attuale (Oggi)</div><div id="actBal" class="stat-value">0 €</div></div>
+      <div class="stat" onclick="showDispDetail()"><div class="stat-label">Saldo Disponibile</div><div id="curBal" class="stat-value">0 €</div></div>
+      <div class="stat" onclick="showSavDetail()"><div class="stat-label">Carta Risparmio</div><div id="savBal" class="stat-value">0 €</div></div>
+      <div class="stat" onclick="showFisseDetail()"><div class="stat-label">Fisse Totali</div><div id="budTot" class="stat-value">0 €</div></div>
     </div>
   </div>
 
   <div class="card">
     <h2 class="section-title">PREVISIONE SALDO FINE MESE</h2>
-    <table class="table"><thead style="background:#eee"><tr><th>Mese</th><th>Entrate</th><th>Fisse</th><th>Saldo Finale</th></tr></thead><tbody id="forecastBody"></tbody></table>
+    <table class="table">
+      <thead style="background:#eee"><tr><th>Mese</th><th>Entrate</th><th>Uscite Fisse</th><th>Saldo Finale</th></tr></thead>
+      <tbody id="forecastBody"></tbody>
+    </table>
   </div>
 
   <div id="detailModal" class="modal" onclick="closeModal(event)">
     <div class="modal-content" onclick="event.stopPropagation()">
-      <div class="modal-header">
+      <div style="display:flex;justify-content:space-between;margin-bottom:1rem">
         <h3 id="modalTitle" style="margin:0; color:var(--accent)">Dettaglio</h3>
         <button onclick="document.getElementById('detailModal').style.display='none'">Chiudi</button>
       </div>
@@ -86,29 +79,33 @@
     <h2 class="section-title">NUOVO MOVIMENTO</h2>
     <form id="movForm">
       <input type="date" id="mDate" required>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:5px 0">
         <select id="mType"><option value="entrata">Entrata (+)</option><option value="uscita">Uscita (-)</option></select>
         <input type="number" id="mAmt" step="0.01" placeholder="Importo €" required>
       </div>
-      <input type="text" id="mCat" placeholder="Categoria" required>
-      <button type="submit" class="primary">Registra</button>
+      <input type="text" id="mCat" placeholder="Descrizione (es. Stipendio)" required>
+      <button type="submit" class="primary">Registra Movimento</button>
     </form>
   </div>
 
   <div class="card">
-    <h2 class="section-title">SPESE FISSE</h2>
+    <h2 class="section-title">SPESE FISSE (RICORRENTI)</h2>
     <form id="budForm">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
-        <input type="date" id="bDate" required>
-        <select id="bPeriod"><option value="mensile">Mensile</option><option value="settimanale">Settimanale</option></select>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:5px">
+        <input type="date" id="bDate" required title="Giorno preciso di scadenza">
+        <select id="bPeriod">
+            <option value="mensile">Mensile</option>
+            <option value="settimanale">Settimanale</option>
+            <option value="giornaliero">Giornaliero</option>
+        </select>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:5px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
         <input type="number" id="bAmt" step="0.01" placeholder="Importo €" required>
         <input type="text" id="bCat" placeholder="Descrizione" required>
       </div>
-      <button type="submit" class="primary">Aggiungi Fissa</button>
+      <button type="submit" class="primary">Aggiungi Spesa Fissa</button>
     </form>
-    <div id="budList" style="margin-top:0.8rem"></div>
+    <div id="budList" style="margin-top:10px"></div>
   </div>
 
   <div class="card">
@@ -130,21 +127,13 @@
   let chart;
 
   function loadData() {
-    const saved = localStorage.getItem('bpm_stable_vfinal');
+    const saved = localStorage.getItem('bpm_v23');
     if (saved) state = JSON.parse(saved);
   }
 
   function saveData() {
-    localStorage.setItem('bpm_stable_vfinal', JSON.stringify(state));
+    localStorage.setItem('bpm_v23', JSON.stringify(state));
   }
-
-  function openModal(title, bodyHtml) {
-    document.getElementById('modalTitle').innerText = title;
-    document.getElementById('modalBody').innerHTML = bodyHtml;
-    document.getElementById('detailModal').style.display = 'flex';
-  }
-
-  function closeModal(e) { if(e.target.id === 'detailModal') e.target.style.display = 'none'; }
 
   function showActDetail() {
     const today = new Date().toISOString().slice(0,10);
@@ -154,16 +143,19 @@
   }
 
   function showDispDetail() {
-    let h = '<h4>Movimenti</h4><table class="table">' + [...state.movs].sort((a,b) => new Date(b.date) - new Date(a.date)).map(x => `<tr><td>${fmtDate(x.date)}<br>${x.cat}</td><td style="text-align:right" class="money ${x.type}">${x.type==='entrata'?'+':'-'} ${fmt(x.amt)}</td></tr>`).join('') + '</table>';
-    h += '<h4 style="margin-top:1rem">Fisse</h4><table class="table">' + state.buds.map(x => `<tr><td>${x.cat}</td><td style="text-align:right" class="money out">- ${fmt(x.amt)}</td></tr>`).join('') + '</table>';
-    openModal("Composizione Saldo Disponibile", h);
+    let h = '<h4>Movimenti Futuri/Passati</h4><table class="table">' + [...state.movs].sort((a,b) => new Date(b.date) - new Date(a.date)).map(x => `<tr><td>${fmtDate(x.date)}<br>${x.cat}</td><td style="text-align:right" class="money ${x.type}">${x.type==='entrata'?'+':'-'} ${fmt(x.amt)}</td></tr>`).join('') + '</table>';
+    h += '<h4 style="margin-top:1rem">Impegni Fissi</h4><table class="table">' + state.buds.map(x => `<tr><td>${fmtDate(x.date)}<br>${x.cat}</td><td style="text-align:right" class="money out">- ${fmt(x.amt)}</td></tr>`).join('') + '</table>';
+    openModal("Saldo Disponibile", h);
   }
 
   function showSavDetail() { openModal("Risparmio", `Totale: <b>${fmt(state.sBal)}</b>`); }
   function showFisseDetail() {
     let h = '<table class="table">' + state.buds.map(x => `<tr><td><span class="badge">${x.period}</span> ${fmtDate(x.date)}<br><b>${x.cat}</b></td><td style="text-align:right" class="money out">- ${fmt(x.amt)}</td></tr>`).join('') + '</table>';
-    openModal("Dettaglio Spese Fisse", h);
+    openModal("Dettaglio Fisse", h);
   }
+
+  function openModal(t, b) { document.getElementById('modalTitle').innerText = t; document.getElementById('modalBody').innerHTML = b; document.getElementById('detailModal').style.display = 'flex'; }
+  function closeModal(e) { if(e.target.id === 'detailModal') e.target.style.display = 'none'; }
 
   function render() {
     const today = new Date().toISOString().slice(0,10);
@@ -177,22 +169,15 @@
     document.getElementById('savBal').textContent = fmt(state.sBal);
     document.getElementById('budTot').textContent = fmt(tBud);
 
-    // STORICO ORDINATO CRONOLOGICAMENTE (Più recente in alto)
     const sortedMovs = [...state.movs].sort((a, b) => new Date(b.date) - new Date(a.date));
-
     document.getElementById('rows').innerHTML = sortedMovs.map(m => {
-        // Troviamo l'indice originale per permettere la cancellazione corretta
         const originalIndex = state.movs.indexOf(m);
-        return `<tr>
-            <td><small>${fmtDate(m.date)}</small><br><b>${m.cat}</b></td>
-            <td class="money ${m.type}" style="text-align:right">${m.type==='entrata'?'+':'-'} ${fmt(m.amt)}</td>
-            <td style="text-align:right"><button class="btn-icon" onclick="delM(${originalIndex})">🗑️</button></td>
-        </tr>`;
+        return `<tr><td><small>${fmtDate(m.date)}</small><br><b>${m.cat}</b></td><td class="money ${m.type}" style="text-align:right">${m.type==='entrata'?'+':'-'} ${fmt(m.amt)}</td><td style="text-align:right"><button class="btn-icon" onclick="delM(${originalIndex})">🗑️</button></td></tr>`;
     }).join('');
 
     document.getElementById('budList').innerHTML = state.buds.map((b,i) => `
       <div style="display:flex;justify-content:space-between;padding:6px;background:#f9fafb;margin-bottom:4px;border-radius:6px;border-left:3px solid #01696f">
-        <span><span class="badge">${b.period}</span> ${b.cat}: <b>${fmt(b.amt)}</b></span>
+        <span><span class="badge">${b.period}</span> ${fmtDate(b.date)} - ${b.cat}: <b>${fmt(b.amt)}</b></span>
         <button class="btn-icon" onclick="delB(${i})">🗑️</button>
       </div>`).join('');
 
@@ -201,18 +186,31 @@
     saveData();
   }
 
+  // LOGICA PREVISIONE POTENZIATA
   function renderForecast(currentActual) {
     const months = [];
     const now = new Date();
     let running = currentActual;
-    const mIn = state.movs.filter(m => m.type === 'entrata' && m.cat.toLowerCase().includes('stipendio')).reduce((s,m)=>s+m.amt, 0);
-    const mOut = state.buds.filter(b => b.period === 'mensile').reduce((s,b)=>s+b.amt, 0);
+
+    // Calcoliamo entrate fisse mensili (es. stipendio inserito nello storico)
+    const monthlyIn = state.movs.filter(m => m.type === 'entrata' && m.cat.toLowerCase().includes('stipendio')).reduce((s,m)=>s+m.amt, 0);
+    
+    // Calcoliamo TUTTE le uscite fisse (mensili, settimanali x4, giornaliere x30)
+    const monthlyOut = state.buds.reduce((acc, b) => {
+        if(b.period === 'mensile') return acc + b.amt;
+        if(b.period === 'settimanale') return acc + (b.amt * 4);
+        if(b.period === 'giornaliero') return acc + (b.amt * 30);
+        return acc;
+    }, 0);
 
     for(let i=0; i<6; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
       const label = d.toLocaleString('it-IT', { month: 'long', year: 'numeric' });
-      running = running + mIn - mOut;
-      months.push(`<tr><td>${label}</td><td class="money in">+ ${fmt(mIn)}</td><td class="money out">- ${fmt(mOut)}</td><td class="forecast-row">${fmt(running)}</td></tr>`);
+      
+      // In ogni mese futuro sommiamo lo stipendio e togliamo tutte le fisse accumulate
+      running = running + monthlyIn - monthlyOut;
+      
+      months.push(`<tr><td>${label}</td><td class="money in">+ ${fmt(monthlyIn)}</td><td class="money out">- ${fmt(monthlyOut)}</td><td class="forecast-row">${fmt(running)}</td></tr>`);
     }
     document.getElementById('forecastBody').innerHTML = months.join('');
   }
@@ -238,12 +236,10 @@
     const ctx = document.getElementById('balanceChart').getContext('2d');
     chart = new Chart(ctx, {
       type: 'line',
-      data: { 
-        datasets: [
-          {label:'Saldo Attuale',borderColor:'#009966',fill:true,backgroundColor:'rgba(0,153,102,0.05)'},
-          {label:'Saldo Disponibile',borderColor:'#01696f',borderDash:[5,5]}
-        ] 
-      },
+      data: { datasets: [
+        {label:'Saldo Attuale',borderColor:'#009966',fill:true,backgroundColor:'rgba(0,153,102,0.05)'},
+        {label:'Saldo Disponibile',borderColor:'#01696f',borderDash:[5,5]}
+      ] },
       options: { responsive: true }
     });
   }
@@ -255,7 +251,12 @@
   };
   document.getElementById('budForm').onsubmit = e => {
     e.preventDefault();
-    state.buds.push({ date: document.getElementById('bDate').value, amt: Number(document.getElementById('bAmt').value), cat: document.getElementById('bCat').value, period: document.getElementById('bPeriod').value });
+    state.buds.push({ 
+        date: document.getElementById('bDate').value, 
+        amt: Number(document.getElementById('bAmt').value), 
+        cat: document.getElementById('bCat').value, 
+        period: document.getElementById('bPeriod').value 
+    });
     render(); e.target.reset(); setDefaultDates();
   };
   function delM(i) { state.movs.splice(i,1); render(); }
@@ -263,7 +264,7 @@
   function exportData() {
     const link = document.createElement('a');
     link.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state));
-    link.download = `bpm_backup.json`;
+    link.download = `bpm_backup_v23.json`;
     link.click();
   }
   function importData(e) {
