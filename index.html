@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BPM FINANCIAL HUB - V43 APRIL DYNAMICS</title>
+  <title>BPM FINANCIAL HUB - V44 DYNAMIC OUTFLOWS</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -73,7 +73,7 @@
   <div class="card">
     <h2 class="section-title">PROIEZIONE 6 MESI</h2>
     <table class="table"><thead style="background:#f9f9f9"><tr><th>Mese</th><th>Entrate*</th><th>Uscite*</th><th>Saldo Finale</th></tr></thead><tbody id="forecastBody"></tbody></table>
-    <small style="color:gray; font-size:0.65rem">*Include stipendio previsto (se non registrato) e movimenti reali.</small>
+    <small style="color:gray; font-size:0.65rem">*Include stipendio, uscite fisse e movimenti reali (anche futuri).</small>
   </div>
 
   <div id="detailModal" class="modal" onclick="closeModal()">
@@ -141,13 +141,13 @@
   let editingId = null;
 
   function loadData() {
-    const saved = localStorage.getItem('bpm_v43');
+    const saved = localStorage.getItem('bpm_v44');
     if (saved) state = JSON.parse(saved);
     document.getElementById('baseSalary').value = state.stipendioBase || 0;
     document.getElementById('alertLimit').value = state.alertLimit || 400;
   }
 
-  function saveData() { localStorage.setItem('bpm_v43', JSON.stringify(state)); }
+  function saveData() { localStorage.setItem('bpm_v44', JSON.stringify(state)); }
 
   function saveConfig() {
     state.stipendioBase = Number(document.getElementById('baseSalary').value);
@@ -169,14 +169,10 @@
     const todayStr = new Date().toISOString().slice(0,10);
     const curMonth = todayStr.slice(0,7);
 
-    // Saldo REALE oggi
     const bancaBal = state.movs.filter(m => m.date <= todayStr && m.source === 'banca').reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
     const cashBal = state.movs.filter(m => m.source === 'contanti').reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
-    
-    // Saldo all'inizio del mese corrente
     const balStartOfMonth = state.movs.filter(m => m.date.slice(0,7) < curMonth && m.source === 'banca').reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
 
-    // Controlla stipendio previsto
     const stipGiaPreso = state.movs.some(m => m.date.slice(0,7) === curMonth && m.type === 'entrata' && m.cat.toLowerCase().includes('stipendio'));
     const stipPrevisto = stipGiaPreso ? 0 : (state.stipendioBase || 0);
 
@@ -248,11 +244,11 @@
       const movsIn = state.movs.filter(m => m.date.slice(0,7) === mStr && m.source === 'banca' && m.type === 'entrata').reduce((s,m)=>s+m.amt, 0);
       const movsOut = state.movs.filter(m => m.date.slice(0,7) === mStr && m.source === 'banca' && m.type === 'uscita').reduce((s,m)=>s+m.amt, 0);
       
-      // LOGICA DINAMICA: Stipendio base aggiunto solo se non c'è già un'entrata "stipendio" reale
       let inMese = movsIn;
       const haGiaStip = state.movs.some(m => m.date.slice(0,7) === mStr && m.cat.toLowerCase().includes('stipendio'));
       if (!haGiaStip) inMese += stipBase;
 
+      // LOGICA V44: Somma fisse mensili + tutte le uscite reali già programmate in quel mese
       const outMese = fisseMensili + movsOut;
       running = running + inMese - outMese;
       
@@ -314,7 +310,7 @@
   };
 
   function exportData() {
-    const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'bpm_v43.json'; a.click();
+    const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'bpm_v44.json'; a.click();
   }
   function importData(e) {
     const r = new FileReader(); r.onload = x => { state = JSON.parse(x.target.result); render(); }; r.readAsText(e.target.files[0]);
