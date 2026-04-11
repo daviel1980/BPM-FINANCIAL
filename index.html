@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BPM FINANCIAL HUB - V57 CASH & GRAPH FIX</title>
+  <title>BPM FINANCIAL HUB - V58 FULL EDIT & CASH</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -24,10 +24,6 @@
     .quick-actions { display: flex; gap: 4px; position: absolute; top: 8px; right: 8px; }
     .btn-small { background: white; border: 1px solid currentColor; font-weight: 700; padding: 2px 4px; font-size: 0.55rem; border-radius: 4px; cursor: pointer; }
     
-    #alertBanner { padding: 0.75rem; border-radius: 0.75rem; font-weight: 700; text-align: center; font-size: 0.85rem; margin-top: 0.5rem; display: none; }
-    .alert-ok { background: #dcfce7; color: #166534; }
-    .alert-warn { background: #fee2e2; color: #991b1b; }
-
     .section-title { margin-bottom: 0.8rem; font-size: 1rem; font-weight: 600; border-bottom: 2px solid var(--accent); padding-bottom: 0.3rem; display: inline-block; }
     input, select, button { border-radius: 0.5rem; border: 1px solid var(--border); padding: 0.6rem; font-size: 0.875rem; width: 100%; box-sizing: border-box; }
     button.primary { background: var(--accent); color: #fff; border: none; font-weight: 600; cursor: pointer; }
@@ -36,9 +32,11 @@
     .table td { padding: 0.6rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
     .money.in { color: var(--in); font-weight: 600; }
     .money.out { color: var(--out); font-weight: 600; }
+    .edit-input { width: 70px; padding: 4px; border: 1px solid var(--save); border-radius: 4px; text-align: right; font-weight: bold; }
     
     .modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
     .modal-content { background: white; padding: 1.5rem; border-radius: 1rem; width: 90%; max-width: 550px; max-height: 80vh; overflow-y: auto; }
+    .btn-icon { background: none; border: none; font-size: 1rem; cursor: pointer; padding: 0 4px; }
   </style>
 </head>
 <body>
@@ -74,19 +72,18 @@
         <div id="cashBal" class="stat-value">0 €</div>
       </div>
     </div>
-    <div id="alertBanner"></div>
   </div>
 
   <div class="card">
     <h2 class="section-title">ANALISI SALDO VS DISPONIBILITÀ</h2>
-    <canvas id="balanceChart" height="200"></canvas>
+    <canvas id="balanceChart" height="180"></canvas>
   </div>
 
   <div id="detailModal" class="modal" onclick="closeModal()">
     <div class="modal-content" onclick="event.stopPropagation()">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
         <h3 id="modalTitle" style="margin:0">Dettaglio</h3>
-        <button onclick="closeModal()">CHIUDI</button>
+        <button onclick="closeModal()">X</button>
       </div>
       <div id="modalBody"></div>
     </div>
@@ -130,11 +127,11 @@
   </div>
 
   <div class="card">
-    <h2 class="section-title">STORICO</h2>
+    <h2 class="section-title">STORICO MOVIMENTI</h2>
     <table class="table"><tbody id="rows"></tbody></table>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:1rem">
       <button onclick="exportData()">Backup</button>
-      <button onclick="document.getElementById('importFile').click()">Importa</button>
+      <button onclick="document.getElementById('importFile').click()">Carica</button>
     </div>
     <input type="file" id="importFile" style="display:none" onchange="importData(event)">
   </div>
@@ -145,15 +142,16 @@
   const fmtDate = d => d.split('-').reverse().join('/');
 
   let state = { movs: [], buds: [], sBal: 0, stipendioBase: 0, alertLimit: 400 };
+  let editingId = null;
   let chart;
 
   function loadData() {
-    const saved = localStorage.getItem('bpm_v57');
+    const saved = localStorage.getItem('bpm_v58');
     if (saved) state = JSON.parse(saved);
     document.getElementById('baseSalary').value = state.stipendioBase || 0;
     document.getElementById('alertLimit').value = state.alertLimit || 400;
   }
-  function saveData() { localStorage.setItem('bpm_v57', JSON.stringify(state)); }
+  function saveData() { localStorage.setItem('bpm_v58', JSON.stringify(state)); }
 
   function manageFunds(action) {
     let amt = prompt("Importo:");
@@ -172,22 +170,25 @@
   function getCalculatedData() {
     const today = new Date().toISOString().slice(0,10);
     const curMonth = today.slice(0,7);
-    
-    // CALCOLO SALDO CASSA CORRETTO (Somma algebrica entrate/uscite contanti)
     const bancaBal = state.movs.filter(m => m.date <= today && m.source === 'banca').reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
     const cashBal = state.movs.filter(m => m.source === 'contanti' && m.date <= today).reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
-    
     const haStip = state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.toLowerCase().includes('stipendio') && m.type === 'entrata');
     const stipDaAgg = haStip ? 0 : (state.stipendioBase || 0);
 
     let fisseRes = 0;
-    let fisseList = [];
     state.buds.forEach(f => {
       const pagata = state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.toLowerCase().includes(f.cat.toLowerCase()));
-      if(!pagata) { fisseRes += f.amt; fisseList.push(f); }
+      if(!pagata) fisseRes += f.amt;
     });
 
-    return { bancaBal, cashBal, avail: bancaBal + stipDaAgg - fisseRes, fisseRes, fisseList, stipDaAgg };
+    return { bancaBal, cashBal, avail: bancaBal + stipDaAgg - fisseRes, fisseRes };
+  }
+
+  function toggleEdit(i) { editingId = (editingId === i) ? null : i; render(); }
+  function saveEdit(i) {
+    const newAmt = Number(document.getElementById(`edit-${i}`).value);
+    if(!isNaN(newAmt)) state.movs[i].amt = newAmt;
+    editingId = null; render();
   }
 
   function render() {
@@ -200,17 +201,21 @@
     document.getElementById('savBal').textContent = fmt(state.sBal);
     document.getElementById('cashBal').textContent = fmt(data.cashBal);
 
-    const banner = document.getElementById('alertBanner');
-    banner.style.display = 'block';
-    if(data.avail < state.alertLimit) { banner.className = 'alert-warn'; banner.textContent = `🚨 ATTENZIONE: Disponibilità bassa (${fmt(data.avail)})`; }
-    else { banner.className = 'alert-ok'; banner.textContent = `✅ Disponibilità OK`; }
-
     const sorted = [...state.movs].sort((a,b) => new Date(b.date) - new Date(a.date));
-    document.getElementById('rows').innerHTML = sorted.map((m) => `<tr>
+    document.getElementById('rows').innerHTML = sorted.map((m) => {
+      const idx = state.movs.indexOf(m);
+      const isEditing = editingId === idx;
+      return `<tr>
         <td><small>${fmtDate(m.date)}</small> ${m.source==='contanti'?'[CASH]':''}<br><b>${m.cat}</b></td>
-        <td style="text-align:right" class="money ${m.type}">${m.type==='entrata'?'+':'-'} ${fmt(m.amt)}</td>
-        <td style="text-align:right"><button onclick="delM(${state.movs.indexOf(m)})" style="background:none;border:none;cursor:pointer">🗑️</button></td>
-    </tr>`).join('');
+        <td style="text-align:right" class="money ${m.type}">
+          ${isEditing ? `<input type="number" id="edit-${idx}" class="edit-input" value="${m.amt}">` : (m.type==='entrata'?'+':'-') + fmt(m.amt)}
+        </td>
+        <td style="text-align:right">
+          <button class="btn-icon" onclick="${isEditing ? `saveEdit(${idx})` : `toggleEdit(${idx})`}">${isEditing ? '💾' : '✏️'}</button>
+          <button class="btn-icon" onclick="delM(${idx})">🗑️</button>
+        </td>
+      </tr>`;
+    }).join('');
 
     document.getElementById('budList').innerHTML = state.buds.map((b,i) => `
       <div style="display:flex;justify-content:space-between;padding:8px;background:#f9f9f9;margin-bottom:5px;border-radius:8px;border-left:4px solid var(--accent)">
@@ -248,20 +253,14 @@
 
   function openModal(t, b) { document.getElementById('modalTitle').innerText = t; document.getElementById('modalBody').innerHTML = b; document.getElementById('detailModal').style.display = 'flex'; }
   function closeModal() { document.getElementById('detailModal').style.display = 'none'; }
-  function showActDetail() { openModal("Hub Banca 💳", "Saldo totale reale ad oggi."); }
-  function showDispDetail() { 
-    const d = getCalculatedData();
-    let h = `<b>SITUAZIONE FINE MESE:</b><hr>`;
-    if(d.stipDaAgg > 0) h += `Stipendio previsto: <span class="money in">+${fmt(d.stipDaAgg)}</span><br>`;
-    h += `Fisse residue: <br>` + (d.fisseList.length ? d.fisseList.map(f => `<div>${f.cat}: <span class="money out">-${fmt(f.amt)}</span></div>`).join('') : "Nessuna") + `<hr><b>Previsto: ${fmt(d.avail)}</b>`;
-    openModal("Disponibile 🏁", h); 
-  }
-  function showSavDetail() { openModal("Risparmio 💎", `Saldo accantonato: ${fmt(state.sBal)}`); }
-  function showCashDetail() { openModal("Cassa Contante 💵", `Totale fisico in portafoglio calcolato da entrate/uscite contanti.`); }
+  function showActDetail() { openModal("Hub Banca 💳", "Totale movimenti bancari reali."); }
+  function showDispDetail() { openModal("Disponibile 🏁", "Saldo + Stipendio previsto - Fisse residue."); }
+  function showSavDetail() { openModal("Risparmio 💎", `Fondo totale: ${fmt(state.sBal)}`); }
+  function showCashDetail() { openModal("Cassa Contante 💵", "Denaro fisico calcolato su prelievi e uscite cash."); }
   
   function saveConfig() { state.stipendioBase = Number(document.getElementById('baseSalary').value); state.alertLimit = Number(document.getElementById('alertLimit').value); saveData(); render(); }
-  function delM(i) { state.movs.splice(i,1); render(); }
-  function delB(i) { state.buds.splice(i,1); render(); }
+  function delM(i) { if(confirm("Eliminare movimento?")) { state.movs.splice(i,1); render(); } }
+  function delB(i) { if(confirm("Eliminare spesa fissa?")) { state.buds.splice(i,1); render(); } }
 
   document.getElementById('movForm').onsubmit = e => {
     e.preventDefault();
@@ -275,7 +274,7 @@
   };
 
   function exportData() {
-    const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'bpm_v57.json'; a.click();
+    const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'bpm_v58.json'; a.click();
   }
   function importData(e) {
     const r = new FileReader(); r.onload = x => { state = JSON.parse(x.target.result); render(); }; r.readAsText(e.target.files[0]);
