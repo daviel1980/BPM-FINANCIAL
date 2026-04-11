@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BPM FINANCIAL HUB - V48 FULL DESCRIPTION</title>
+  <title>BPM FINANCIAL HUB - V49 PERFECT ALIGNMENT</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -17,9 +17,11 @@
     
     /* DASHBOARD */
     .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.5rem; }
-    .stat { padding: 0.75rem; background: var(--accent-light); border-radius: 0.75rem; cursor: pointer; position: relative; border: 1px solid transparent; }
-    .stat-label { font-size: 0.7rem; color: var(--accent); font-weight: 700; text-transform: uppercase; pointer-events: none; }
-    .stat-value { font-size: 1.1rem; font-weight: 800; pointer-events: none; }
+    .stat { padding: 0.85rem; background: var(--accent-light); border-radius: 0.75rem; cursor: pointer; position: relative; border: 1px solid transparent; transition: 0.2s; }
+    .stat:hover { border-color: var(--accent); }
+    .stat-label { font-size: 0.65rem; color: var(--accent); font-weight: 700; text-transform: uppercase; }
+    .stat-date { font-size: 0.6rem; color: gray; margin-bottom: 2px; }
+    .stat-value { font-size: 1.15rem; font-weight: 800; }
     
     .quick-actions { display: flex; gap: 4px; position: absolute; top: 8px; right: 8px; }
     .btn-small { background: white; border: 1px solid currentColor; font-weight: 700; padding: 2px 4px; font-size: 0.55rem; border-radius: 4px; cursor: pointer; }
@@ -38,7 +40,7 @@
     .money.out { color: var(--out); font-weight: 600; }
     
     .modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
-    .modal-content { background: white; padding: 1.5rem; border-radius: 1rem; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
+    .modal-content { background: white; padding: 1.5rem; border-radius: 1rem; width: 90%; max-width: 550px; max-height: 85vh; overflow-y: auto; }
   </style>
 </head>
 <body>
@@ -49,24 +51,28 @@
   <div class="card">
     <div class="stats">
       <div class="stat" onclick="showActDetail()">
-        <div class="stat-label">Saldo Banca</div>
+        <div id="dateBanca" class="stat-date"></div>
+        <div class="stat-label">HUB BANCA 💳</div>
         <div id="actBal" class="stat-value">0 €</div>
       </div>
       <div class="stat" onclick="showDispDetail()">
-        <div class="stat-label">Disponibile</div>
+        <div id="dateDisp" class="stat-date"></div>
+        <div class="stat-label">DISPONIBILE 🏁</div>
         <div id="curBal" class="stat-value">0 €</div>
       </div>
       <div class="stat" style="color:var(--save); background:#eff6ff" onclick="showSavDetail()">
         <div class="quick-actions">
-          <button class="btn-small" title="Versa" onclick="event.stopPropagation(); manageFunds('save_in');">➕</button>
-          <button class="btn-small" title="Revoca" onclick="event.stopPropagation(); manageFunds('save_out');">🔙</button>
+          <button class="btn-small" onclick="event.stopPropagation(); manageFunds('save_in');">➕</button>
+          <button class="btn-small" onclick="event.stopPropagation(); manageFunds('save_out');">🔙</button>
         </div>
-        <div class="stat-label">Risparmio</div>
+        <div id="dateSave" class="stat-date"></div>
+        <div class="stat-label">RISPARMIO 💎</div>
         <div id="savBal" class="stat-value">0 €</div>
       </div>
       <div class="stat" style="color:var(--cash); background:#fffbeb" onclick="showCashDetail()">
-        <button class="btn-small" style="position:absolute; top:8px; right:8px;" title="Preleva" onclick="event.stopPropagation(); manageFunds('cash_in');">➕</button>
-        <div class="stat-label">Contanti</div>
+        <button class="btn-small" style="position:absolute; top:8px; right:8px;" onclick="event.stopPropagation(); manageFunds('cash_in');">➕</button>
+        <div id="dateCash" class="stat-date"></div>
+        <div class="stat-label">CASSA CONTANTE 💵</div>
         <div id="cashBal" class="stat-value">0 €</div>
       </div>
     </div>
@@ -74,16 +80,15 @@
   </div>
 
   <div class="card">
-    <h2 class="section-title">PROIEZIONE DINAMICA 6 MESI</h2>
-    <table class="table"><thead style="background:#f9f9f9"><tr><th>Mese</th><th>Entrate*</th><th>Uscite*</th><th>Saldo</th></tr></thead><tbody id="forecastBody"></tbody></table>
-    <p style="font-size:0.6rem; color:gray">*Le proiezioni includono stipendio base + movimenti futuri già registrati nello storico.</p>
+    <h2 class="section-title">PROIEZIONE ALLINEATA 6 MESI</h2>
+    <table class="table"><thead style="background:#f9f9f9"><tr><th>Mese</th><th>Entrate</th><th>Uscite</th><th>Fine Mese</th></tr></thead><tbody id="forecastBody"></tbody></table>
   </div>
 
   <div id="detailModal" class="modal" onclick="closeModal()">
     <div class="modal-content" onclick="event.stopPropagation()">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-        <h3 id="modalTitle" style="margin:0">Dettaglio</h3>
-        <button onclick="closeModal()">Chiudi</button>
+        <h3 id="modalTitle" style="margin:0; color:var(--accent)">Dettaglio</h3>
+        <button onclick="closeModal()">CHIUDI</button>
       </div>
       <div id="modalBody"></div>
     </div>
@@ -111,23 +116,23 @@
         <select id="bPeriod"><option value="mensile">Mensile</option><option value="singola">Singola</option></select>
       </div>
       <input type="number" id="bAmt" step="0.01" placeholder="Importo €" required style="margin-bottom:5px">
-      <input type="text" id="bCat" placeholder="Nome Scadenza" required style="margin-bottom:5px">
+      <input type="text" id="bCat" placeholder="Nome Spesa" required style="margin-bottom:5px">
       <button type="submit" class="primary">Salva Fissa</button>
     </form>
     <div id="budList" style="margin-top:10px"></div>
   </div>
 
   <div class="card">
-    <h2 class="section-title">CONFIGURAZIONE HUB</h2>
+    <h2 class="section-title">CONFIGURAZIONE</h2>
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px">
       <div><label style="font-size:0.7rem">Stipendio (€)</label><input type="number" id="baseSalary"></div>
-      <div><label style="font-size:0.7rem">Allerta (€)</label><input type="number" id="alertLimit" value="400"></div>
+      <div><label style="font-size:0.7rem">Alert (€)</label><input type="number" id="alertLimit" value="400"></div>
     </div>
-    <button onclick="saveConfig()" class="primary" style="margin-top:10px">Applica Modifiche</button>
+    <button onclick="saveConfig()" class="primary" style="margin-top:10px">Applica</button>
   </div>
 
   <div class="card">
-    <h2 class="section-title">STORICO MOVIMENTI</h2>
+    <h2 class="section-title">STORICO</h2>
     <table class="table"><tbody id="rows"></tbody></table>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:1rem">
       <button onclick="exportData()">Backup</button>
@@ -143,80 +148,65 @@
 
   let state = { movs: [], buds: [], sBal: 0, stipendioBase: 0, alertLimit: 400 };
 
-  // CARICAMENTO E SALVATAGGIO
   function loadData() {
-    const saved = localStorage.getItem('bpm_v48');
+    const saved = localStorage.getItem('bpm_v49');
     if (saved) state = JSON.parse(saved);
     document.getElementById('baseSalary').value = state.stipendioBase || 0;
     document.getElementById('alertLimit').value = state.alertLimit || 400;
   }
-  function saveData() { localStorage.setItem('bpm_v48', JSON.stringify(state)); }
+  function saveData() { localStorage.setItem('bpm_v49', JSON.stringify(state)); }
 
-  // GESTIONE TRASFERIMENTI FONDI
   function manageFunds(action) {
     let amt = prompt("Importo operazione:");
     if(!amt || isNaN(amt)) return;
     const val = Number(amt);
     const date = new Date().toISOString().slice(0,10);
-    
-    if(action === 'save_in') { 
-        state.sBal += val; 
-        state.movs.push({ date, source:'banca', type:'uscita', amt:val, cat:"💎 Versamento Risparmio" }); 
-    }
-    else if(action === 'save_out') { 
-        state.sBal -= val; 
-        state.movs.push({ date, source:'banca', type:'entrata', amt:val, cat:"🔙 Revoca Risparmio" }); 
-    }
-    else if(action === 'cash_in') { 
-        state.movs.push({ date, source:'banca', type:'uscita', amt:val, cat:"🏧 Prelievo Contanti" });
-        state.movs.push({ date, source:'contanti', type:'entrata', amt:val, cat:"💵 Carico Cassa" }); 
-    }
+    if(action === 'save_in') { state.sBal += val; state.movs.push({ date, source:'banca', type:'uscita', amt:val, cat:"💎 Versamento Risparmio" }); }
+    else if(action === 'save_out') { state.sBal -= val; state.movs.push({ date, source:'banca', type:'entrata', amt:val, cat:"🔙 Revoca Risparmio" }); }
+    else if(action === 'cash_in') { state.movs.push({ date, source:'banca', type:'uscita', amt:val, cat:"🏧 Prelievo Contanti" }); state.movs.push({ date, source:'contanti', type:'entrata', amt:val, cat:"💵 Carico Cassa" }); }
     render();
   }
 
-  // MOTORE DI CALCOLO SALDI
   function getCalculatedData() {
     const today = new Date().toISOString().slice(0,10);
     const curMonth = today.slice(0,7);
     
-    // Saldi attuali (Reali)
     const bancaBal = state.movs.filter(m => m.date <= today && m.source === 'banca').reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
-    const cashBal = state.movs.filter(m => m.source === 'contanti').reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
-    
-    // Base per proiezioni (Saldo prima dell'inizio del mese attuale)
+    const cashBal = state.movs.filter(m => m.source === 'contanti' && m.date <= today).reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
     const balPreMonth = state.movs.filter(m => m.date.slice(0,7) < curMonth && m.source === 'banca').reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
 
-    // Calcolo Disponibile (Fine mese corrente)
     const haStip = state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.toLowerCase().includes('stipendio'));
     const stipPrevisto = haStip ? 0 : (state.stipendioBase || 0);
 
     let fisseRes = 0;
+    let fisseMese = [];
     state.buds.forEach(f => {
       const pagata = state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.toLowerCase().includes(f.cat.toLowerCase()));
-      if(!pagata) fisseRes += f.amt;
+      if(!pagata) { fisseRes += f.amt; fisseMese.push(f); }
     });
 
-    return { bancaBal, cashBal, balPreMonth, avail: bancaBal + stipPrevisto - fisseRes };
+    return { bancaBal, cashBal, balPreMonth, avail: bancaBal + stipPrevisto - fisseRes, fisseRes, fisseMese, stipPrevisto };
   }
 
-  // AGGIORNAMENTO UI
   function render() {
     const data = getCalculatedData();
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('it-IT', { day:'2-digit', month:'short' });
+    
+    // Aggiornamento Date e Valori Tabs
+    ['dateBanca', 'dateDisp', 'dateSave', 'dateCash'].forEach(id => document.getElementById(id).textContent = dateStr);
     document.getElementById('actBal').textContent = fmt(data.bancaBal);
     document.getElementById('curBal').textContent = fmt(data.avail);
     document.getElementById('savBal').textContent = fmt(state.sBal);
     document.getElementById('cashBal').textContent = fmt(data.cashBal);
 
     const banner = document.getElementById('alertBanner');
-    if(data.avail < state.alertLimit) { 
-        banner.className = 'alert-warn'; banner.textContent = `🚨 SOGLIA CRITICA: ${fmt(data.avail)}`; 
-    } else { 
-        banner.className = 'alert-ok'; banner.textContent = `✅ DISPONIBILITÀ OK`; 
-    }
+    if(data.avail < state.alertLimit) { banner.className = 'alert-warn'; banner.textContent = `🚨 DISPONIBILITÀ CRITICA: ${fmt(data.avail)}`; }
+    else { banner.className = 'alert-ok'; banner.textContent = `✅ DISPONIBILITÀ OK`; }
     banner.style.display = 'block';
 
     const sorted = [...state.movs].sort((a,b) => new Date(b.date) - new Date(a.date));
-    document.getElementById('rows').innerHTML = sorted.map((m, i) => `<tr>
+    document.getElementById('rows').innerHTML = sorted.map((m) => `<tr>
         <td><small>${fmtDate(m.date)}</small> ${m.source==='contanti'?'[CASH]':''}<br><b>${m.cat}</b></td>
         <td style="text-align:right" class="money ${m.type}">${m.type==='entrata'?'+':'-'} ${fmt(m.amt)}</td>
         <td style="text-align:right"><button onclick="delM(${state.movs.indexOf(m)})" style="background:none;border:none;cursor:pointer">🗑️</button></td>
@@ -232,7 +222,6 @@
     saveData();
   }
 
-  // LOGICA PROIEZIONE 6 MESI
   function renderForecast(balPreMonth) {
     let running = balPreMonth;
     const stipBase = state.stipendioBase || 0;
@@ -259,15 +248,35 @@
     document.getElementById('forecastBody').innerHTML = html;
   }
 
-  // TABS DETTAGLIO
   function openModal(t, b) { document.getElementById('modalTitle').innerText = t; document.getElementById('modalBody').innerHTML = b; document.getElementById('detailModal').style.display = 'flex'; }
   function closeModal() { document.getElementById('detailModal').style.display = 'none'; }
-  function showActDetail() { openModal("Saldo Banca", "Totale movimenti bancari reali."); }
-  function showDispDetail() { openModal("Disponibilità", "Saldo + Stipendio Previsto - Fisse residue."); }
-  function showSavDetail() { openModal("Risparmio", "Fondo accumulato per obiettivi futuri."); }
-  function showCashDetail() { openModal("Contanti", "Denaro fisico nel portafoglio."); }
+  
+  function showActDetail() { openModal("Hub Banca 💳", "Totale movimenti reali registrati sul conto corrente ad oggi."); }
+  
+  function showDispDetail() { 
+    const d = getCalculatedData();
+    const curMonth = new Date().toISOString().slice(0,7);
+    const movsMese = state.movs.filter(m => m.date.slice(0,7) === curMonth && m.source === 'banca');
+    
+    let h = `<b>SITUAZIONE FINE MESE:</b><br><hr>`;
+    h += `Saldo Inizio Mese: ${fmt(d.balPreMonth)}<br>`;
+    h += `<br><b>Movimenti Reali:</b><br>` + (movsMese.length ? movsMese.map(m => `<div style="font-size:0.8rem">${m.cat}: <span class="money ${m.type}">${m.type==='entrata'?'+':'-'}${fmt(m.amt)}</span></div>`).join('') : "Nessuno") + `<hr>`;
+    if(d.stipPrevisto > 0) h += `Stipendio Previsto: <span class="money in">+${fmt(d.stipPrevisto)}</span><br>`;
+    h += `<br><b>Spese Fisse Residue:</b><br>` + (d.fisseMese.length ? d.fisseMese.map(f => `<div style="font-size:0.8rem">${f.cat}: <span class="money out">-${fmt(f.amt)}</span></div>`).join('') : "Nessuna") + `<hr>`;
+    h += `<b>DISPONIBILITÀ FINALE: ${fmt(d.avail)}</b>`;
+    
+    openModal("Disponibile 🏁", h); 
+  }
 
-  // AZIONI FORM
+  function showSavDetail() { openModal("Risparmio 💎", "Fondo accumulato nella Carta Risparmio."); }
+  function showCashDetail() { 
+    const today = new Date().toISOString().slice(0,10);
+    const movsCash = state.movs.filter(m => m.source === 'contanti').sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
+    let h = `Saldo Cassa: <b>${fmt(state.movs.filter(m=>m.source==='contanti').reduce((s,m)=>s+(m.type==='entrata'?m.amt:-m.amt),0))}</b><br><br>Ultimi 5 movimenti:<br>`;
+    h += movsCash.map(m => `<div style="font-size:0.8rem">${fmtDate(m.date)} - ${m.cat}: ${fmt(m.amt)}</div>`).join('');
+    openModal("Cassa Contante 💵", h); 
+  }
+
   function saveConfig() { state.stipendioBase = Number(document.getElementById('baseSalary').value); state.alertLimit = Number(document.getElementById('alertLimit').value); saveData(); render(); }
   function delM(i) { state.movs.splice(i,1); render(); }
   function delB(i) { state.buds.splice(i,1); render(); }
@@ -283,9 +292,8 @@
     render(); e.target.reset();
   };
 
-  // BACKUP
   function exportData() {
-    const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'bpm_v48.json'; a.click();
+    const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'bpm_v49.json'; a.click();
   }
   function importData(e) {
     const r = new FileReader(); r.onload = x => { state = JSON.parse(x.target.result); render(); }; r.readAsText(e.target.files[0]);
