@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BPM FINANCIAL HUB - V47 FINAL STABLE</title>
+  <title>BPM FINANCIAL HUB - V48 FULL DESCRIPTION</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -15,6 +15,7 @@
     .card { background: var(--card-bg); border-radius: 1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.05); padding: 1.25rem; }
     .title { margin: 0; font-size: 1.5rem; color: var(--accent); text-align: center; font-weight: 800; }
     
+    /* DASHBOARD */
     .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.5rem; }
     .stat { padding: 0.75rem; background: var(--accent-light); border-radius: 0.75rem; cursor: pointer; position: relative; border: 1px solid transparent; }
     .stat-label { font-size: 0.7rem; color: var(--accent); font-weight: 700; text-transform: uppercase; pointer-events: none; }
@@ -57,14 +58,14 @@
       </div>
       <div class="stat" style="color:var(--save); background:#eff6ff" onclick="showSavDetail()">
         <div class="quick-actions">
-          <button class="btn-small" onclick="event.stopPropagation(); manageFunds('save_in');">➕</button>
-          <button class="btn-small" onclick="event.stopPropagation(); manageFunds('save_out');">🔙</button>
+          <button class="btn-small" title="Versa" onclick="event.stopPropagation(); manageFunds('save_in');">➕</button>
+          <button class="btn-small" title="Revoca" onclick="event.stopPropagation(); manageFunds('save_out');">🔙</button>
         </div>
         <div class="stat-label">Risparmio</div>
         <div id="savBal" class="stat-value">0 €</div>
       </div>
       <div class="stat" style="color:var(--cash); background:#fffbeb" onclick="showCashDetail()">
-        <button class="btn-small" style="position:absolute; top:8px; right:8px;" onclick="event.stopPropagation(); manageFunds('cash_in');">➕</button>
+        <button class="btn-small" style="position:absolute; top:8px; right:8px;" title="Preleva" onclick="event.stopPropagation(); manageFunds('cash_in');">➕</button>
         <div class="stat-label">Contanti</div>
         <div id="cashBal" class="stat-value">0 €</div>
       </div>
@@ -73,27 +74,23 @@
   </div>
 
   <div class="card">
-    <h2 class="section-title">ANDAMENTO BANCA</h2>
-    <canvas id="balanceChart" height="180"></canvas>
-  </div>
-
-  <div class="card">
-    <h2 class="section-title">PROIEZIONE 6 MESI (REALE + FISSE)</h2>
-    <table class="table"><thead style="background:#f9f9f9"><tr><th>Mese</th><th>Entrate</th><th>Uscite</th><th>Saldo</th></tr></thead><tbody id="forecastBody"></tbody></table>
+    <h2 class="section-title">PROIEZIONE DINAMICA 6 MESI</h2>
+    <table class="table"><thead style="background:#f9f9f9"><tr><th>Mese</th><th>Entrate*</th><th>Uscite*</th><th>Saldo</th></tr></thead><tbody id="forecastBody"></tbody></table>
+    <p style="font-size:0.6rem; color:gray">*Le proiezioni includono stipendio base + movimenti futuri già registrati nello storico.</p>
   </div>
 
   <div id="detailModal" class="modal" onclick="closeModal()">
     <div class="modal-content" onclick="event.stopPropagation()">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
         <h3 id="modalTitle" style="margin:0">Dettaglio</h3>
-        <button onclick="closeModal()">X</button>
+        <button onclick="closeModal()">Chiudi</button>
       </div>
       <div id="modalBody"></div>
     </div>
   </div>
 
   <div class="card">
-    <h2 class="section-title">NUOVO MOVIMENTO</h2>
+    <h2 class="section-title">REGISTRA MOVIMENTO REALE</h2>
     <form id="movForm">
       <input type="date" id="mDate" required>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:5px 0">
@@ -102,12 +99,12 @@
       </div>
       <input type="number" id="mAmt" step="0.01" placeholder="Importo €" required style="margin-bottom:5px">
       <input type="text" id="mCat" placeholder="Descrizione" required style="margin-bottom:5px">
-      <button type="submit" class="primary">Registra Movimento</button>
+      <button type="submit" class="primary">Esegui Operazione</button>
     </form>
   </div>
 
   <div class="card">
-    <h2 class="section-title">SPESE FISSE PROGRAMMATE</h2>
+    <h2 class="section-title">PROGRAMMA SPESE FISSE</h2>
     <form id="budForm">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:5px">
         <input type="date" id="bDate" required>
@@ -115,7 +112,7 @@
       </div>
       <input type="number" id="bAmt" step="0.01" placeholder="Importo €" required style="margin-bottom:5px">
       <input type="text" id="bCat" placeholder="Nome Scadenza" required style="margin-bottom:5px">
-      <button type="submit" class="primary">Aggiungi Fissa</button>
+      <button type="submit" class="primary">Salva Fissa</button>
     </form>
     <div id="budList" style="margin-top:10px"></div>
   </div>
@@ -126,15 +123,15 @@
       <div><label style="font-size:0.7rem">Stipendio (€)</label><input type="number" id="baseSalary"></div>
       <div><label style="font-size:0.7rem">Allerta (€)</label><input type="number" id="alertLimit" value="400"></div>
     </div>
-    <button onclick="saveConfig()" class="primary" style="margin-top:10px">Salva</button>
+    <button onclick="saveConfig()" class="primary" style="margin-top:10px">Applica Modifiche</button>
   </div>
 
   <div class="card">
-    <h2 class="section-title">STORICO</h2>
+    <h2 class="section-title">STORICO MOVIMENTI</h2>
     <table class="table"><tbody id="rows"></tbody></table>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:1rem">
       <button onclick="exportData()">Backup</button>
-      <button onclick="document.getElementById('importFile').click()">Carica</button>
+      <button onclick="document.getElementById('importFile').click()">Importa</button>
     </div>
     <input type="file" id="importFile" style="display:none" onchange="importData(event)">
   </div>
@@ -145,19 +142,19 @@
   const fmtDate = d => d.split('-').reverse().join('/');
 
   let state = { movs: [], buds: [], sBal: 0, stipendioBase: 0, alertLimit: 400 };
-  let chart;
 
+  // CARICAMENTO E SALVATAGGIO
   function loadData() {
-    const saved = localStorage.getItem('bpm_v47');
+    const saved = localStorage.getItem('bpm_v48');
     if (saved) state = JSON.parse(saved);
     document.getElementById('baseSalary').value = state.stipendioBase || 0;
     document.getElementById('alertLimit').value = state.alertLimit || 400;
   }
+  function saveData() { localStorage.setItem('bpm_v48', JSON.stringify(state)); }
 
-  function saveData() { localStorage.setItem('bpm_v47', JSON.stringify(state)); }
-
+  // GESTIONE TRASFERIMENTI FONDI
   function manageFunds(action) {
-    let amt = prompt("Inserisci importo:");
+    let amt = prompt("Importo operazione:");
     if(!amt || isNaN(amt)) return;
     const val = Number(amt);
     const date = new Date().toISOString().slice(0,10);
@@ -166,25 +163,30 @@
         state.sBal += val; 
         state.movs.push({ date, source:'banca', type:'uscita', amt:val, cat:"💎 Versamento Risparmio" }); 
     }
-    if(action === 'save_out') { 
+    else if(action === 'save_out') { 
         state.sBal -= val; 
         state.movs.push({ date, source:'banca', type:'entrata', amt:val, cat:"🔙 Revoca Risparmio" }); 
     }
-    if(action === 'cash_in') { 
+    else if(action === 'cash_in') { 
         state.movs.push({ date, source:'banca', type:'uscita', amt:val, cat:"🏧 Prelievo Contanti" });
         state.movs.push({ date, source:'contanti', type:'entrata', amt:val, cat:"💵 Carico Cassa" }); 
     }
     render();
   }
 
+  // MOTORE DI CALCOLO SALDI
   function getCalculatedData() {
     const today = new Date().toISOString().slice(0,10);
     const curMonth = today.slice(0,7);
     
+    // Saldi attuali (Reali)
     const bancaBal = state.movs.filter(m => m.date <= today && m.source === 'banca').reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
     const cashBal = state.movs.filter(m => m.source === 'contanti').reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
+    
+    // Base per proiezioni (Saldo prima dell'inizio del mese attuale)
     const balPreMonth = state.movs.filter(m => m.date.slice(0,7) < curMonth && m.source === 'banca').reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
 
+    // Calcolo Disponibile (Fine mese corrente)
     const haStip = state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.toLowerCase().includes('stipendio'));
     const stipPrevisto = haStip ? 0 : (state.stipendioBase || 0);
 
@@ -194,21 +196,24 @@
       if(!pagata) fisseRes += f.amt;
     });
 
-    return { bancaBal, cashBal, balPreMonth, avail: bancaBal + stipPrevisto - fisseRes, fisseRes };
+    return { bancaBal, cashBal, balPreMonth, avail: bancaBal + stipPrevisto - fisseRes };
   }
 
+  // AGGIORNAMENTO UI
   function render() {
     const data = getCalculatedData();
-    const today = new Date().toISOString().slice(0,10);
-    
     document.getElementById('actBal').textContent = fmt(data.bancaBal);
     document.getElementById('curBal').textContent = fmt(data.avail);
     document.getElementById('savBal').textContent = fmt(state.sBal);
     document.getElementById('cashBal').textContent = fmt(data.cashBal);
 
     const banner = document.getElementById('alertBanner');
-    if(data.avail < state.alertLimit) { banner.className = 'alert-warn'; banner.textContent = `🚨 ATTENZIONE: Disponibilità bassa (${fmt(data.avail)})`; banner.style.display = 'block'; }
-    else { banner.className = 'alert-ok'; banner.textContent = `✅ Stato Finanziario OK`; banner.style.display = 'block'; }
+    if(data.avail < state.alertLimit) { 
+        banner.className = 'alert-warn'; banner.textContent = `🚨 SOGLIA CRITICA: ${fmt(data.avail)}`; 
+    } else { 
+        banner.className = 'alert-ok'; banner.textContent = `✅ DISPONIBILITÀ OK`; 
+    }
+    banner.style.display = 'block';
 
     const sorted = [...state.movs].sort((a,b) => new Date(b.date) - new Date(a.date));
     document.getElementById('rows').innerHTML = sorted.map((m, i) => `<tr>
@@ -224,10 +229,10 @@
       </div>`).join('');
 
     renderForecast(data.balPreMonth);
-    updateChart(today);
     saveData();
   }
 
+  // LOGICA PROIEZIONE 6 MESI
   function renderForecast(balPreMonth) {
     let running = balPreMonth;
     const stipBase = state.stipendioBase || 0;
@@ -254,27 +259,15 @@
     document.getElementById('forecastBody').innerHTML = html;
   }
 
-  function updateChart(today) {
-    const sorted = [...state.movs].filter(m=>m.source==='banca').sort((a,b)=>new Date(a.date)-new Date(b.date));
-    const labels = sorted.map(m=>fmtDate(m.date));
-    let rB = 0;
-    const dB = sorted.map(m => { rB += (m.type==='entrata'?m.amt:-m.amt); return rB; });
-    chart.data.labels = labels;
-    chart.data.datasets[0].data = dB;
-    chart.update();
-  }
-
-  function initChart() {
-    const ctx = document.getElementById('balanceChart').getContext('2d');
-    chart = new Chart(ctx, { type: 'line', data: { datasets: [{label:'Banca',borderColor:'#009966',pointRadius:1,fill:false}] }, options: { responsive: true } });
-  }
-
+  // TABS DETTAGLIO
   function openModal(t, b) { document.getElementById('modalTitle').innerText = t; document.getElementById('modalBody').innerHTML = b; document.getElementById('detailModal').style.display = 'flex'; }
   function closeModal() { document.getElementById('detailModal').style.display = 'none'; }
-  function showActDetail() { openModal("Saldo Banca", "Totale movimenti reali su conto corrente."); }
+  function showActDetail() { openModal("Saldo Banca", "Totale movimenti bancari reali."); }
   function showDispDetail() { openModal("Disponibilità", "Saldo + Stipendio Previsto - Fisse residue."); }
-  function showSavDetail() { openModal("Risparmio", "Fondo accumulato nella Carta Risparmio."); }
-  function showCashDetail() { openModal("Contanti", "Denaro fisico registrato."); }
+  function showSavDetail() { openModal("Risparmio", "Fondo accumulato per obiettivi futuri."); }
+  function showCashDetail() { openModal("Contanti", "Denaro fisico nel portafoglio."); }
+
+  // AZIONI FORM
   function saveConfig() { state.stipendioBase = Number(document.getElementById('baseSalary').value); state.alertLimit = Number(document.getElementById('alertLimit').value); saveData(); render(); }
   function delM(i) { state.movs.splice(i,1); render(); }
   function delB(i) { state.buds.splice(i,1); render(); }
@@ -284,21 +277,21 @@
     state.movs.push({ date: document.getElementById('mDate').value, source: document.getElementById('mSource').value, type: document.getElementById('mType').value, amt: Number(document.getElementById('mAmt').value), cat: document.getElementById('mCat').value });
     render(); e.target.reset();
   };
-
   document.getElementById('budForm').onsubmit = e => {
     e.preventDefault();
     state.buds.push({ date: document.getElementById('bDate').value, amt: Number(document.getElementById('bAmt').value), cat: document.getElementById('bCat').value, period: document.getElementById('bPeriod').value });
     render(); e.target.reset();
   };
 
+  // BACKUP
   function exportData() {
-    const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'bpm_v47.json'; a.click();
+    const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'bpm_v48.json'; a.click();
   }
   function importData(e) {
     const r = new FileReader(); r.onload = x => { state = JSON.parse(x.target.result); render(); }; r.readAsText(e.target.files[0]);
   }
 
-  loadData(); initChart(); render();
+  loadData(); render();
 </script>
 </body>
 </html>
