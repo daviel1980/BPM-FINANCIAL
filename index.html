@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BPM FINANCIAL HUB - V30 TOTAL FIX</title>
+  <title>BPM FINANCIAL HUB - V31 STABLE PROJECTION</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -15,12 +15,9 @@
     .card { background: var(--card-bg); border-radius: 1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.05); padding: 1.25rem; }
     .title { margin: 0; font-size: 1.5rem; color: var(--accent); text-align: center; font-weight: 800; }
     .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.5rem; }
-    .stat { padding: 0.75rem; background: var(--accent-light); border-radius: 0.75rem; cursor: pointer; border: 1px solid transparent; transition: 0.2s; }
-    .stat:active { transform: scale(0.95); background: #d0e8e8; }
+    .stat { padding: 0.75rem; background: var(--accent-light); border-radius: 0.75rem; cursor: pointer; border: 1px solid transparent; }
     .stat-label { font-size: 0.8rem; color: var(--accent); font-weight: 500; }
     .stat-value { font-size: 1.1rem; font-weight: 700; }
-    .modal { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
-    .modal-content { background: white; padding: 1.5rem; border-radius: 1rem; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
     .section-title { margin-bottom: 0.8rem; font-size: 1rem; font-weight: 600; border-bottom: 2px solid var(--accent); padding-bottom: 0.3rem; display: inline-block; }
     input, select, button { border-radius: 0.5rem; border: 1px solid var(--border); padding: 0.6rem; font-size: 0.875rem; width: 100%; box-sizing: border-box; }
     button.primary { background: var(--accent); color: #fff; border: none; font-weight: 600; cursor: pointer; }
@@ -28,6 +25,8 @@
     .table td, .table th { padding: 0.6rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; text-align: left; }
     .money.in { color: var(--in); font-weight: 600; }
     .money.out { color: var(--out); font-weight: 600; }
+    .modal { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
+    .modal-content { background: white; padding: 1.5rem; border-radius: 1rem; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
     .badge { font-size: 0.6rem; padding: 2px 5px; border-radius: 4px; background: #01696f; color: white; text-transform: uppercase; }
   </style>
 </head>
@@ -46,8 +45,17 @@
   </div>
 
   <div class="card">
-    <h2 class="section-title">PREVISIONE SALDO FINE MESE</h2>
-    <table class="table"><thead style="background:#f1f5f9"><tr><th>Mese</th><th>Entrate</th><th>Uscite Fisse</th><th>Saldo Finale</th></tr></thead><tbody id="forecastBody"></tbody></table>
+    <h2 class="section-title">IMPOSTA ENTRATA RICORRENTE (STIPENDIO)</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
+        <input type="number" id="baseSalary" placeholder="Importo Stipendio €">
+        <button onclick="saveSalary()" class="primary">Salva Stipendio</button>
+    </div>
+    <p style="font-size:0.7rem; color:gray; margin-top:5px">Questo valore verrà usato per le proiezioni dei mesi futuri.</p>
+  </div>
+
+  <div class="card">
+    <h2 class="section-title">PROIEZIONE PROSSIMI 6 MESI</h2>
+    <table class="table"><thead style="background:#f1f5f9"><tr><th>Mese</th><th>Entrate stim.</th><th>Fisse stim.</th><th>Saldo stim.</th></tr></thead><tbody id="forecastBody"></tbody></table>
   </div>
 
   <div id="detailModal" class="modal" onclick="this.style.display='none'">
@@ -74,7 +82,7 @@
   </div>
 
   <div class="card">
-    <h2 class="section-title">SCADENZE E FISSE</h2>
+    <h2 class="section-title">PROGRAMMA FISSE E SCADENZE</h2>
     <form id="budForm">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:5px">
         <input type="date" id="bDate" required>
@@ -89,13 +97,13 @@
         <input type="number" id="bAmt" step="0.01" placeholder="Importo €" required>
         <input type="text" id="bCat" placeholder="Nome Spesa" required>
       </div>
-      <button type="submit" class="primary">Salva Programmazione</button>
+      <button type="submit" class="primary">Salva Spesa Fissa</button>
     </form>
     <div id="budList" style="margin-top:10px"></div>
   </div>
 
   <div class="card">
-    <h2 class="section-title">STORICO (CRONOLOGICO)</h2>
+    <h2 class="section-title">STORICO MOVIMENTI</h2>
     <table class="table"><tbody id="rows"></tbody></table>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:1rem">
       <button onclick="exportData()">Backup 📥</button>
@@ -109,27 +117,32 @@
   const fmt = n => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
   const fmtDate = d => d.split('-').reverse().join('/');
 
-  let state = { movs: [], buds: [], sBal: 0 };
+  let state = { movs: [], buds: [], sBal: 0, stipendioBase: 0 };
 
   function loadData() {
-    const saved = localStorage.getItem('bpm_v30');
+    const saved = localStorage.getItem('bpm_v31');
     if (saved) state = JSON.parse(saved);
+    if(state.stipendioBase) document.getElementById('baseSalary').value = state.stipendioBase;
   }
 
   function saveData() {
-    localStorage.setItem('bpm_v30', JSON.stringify(state));
+    localStorage.setItem('bpm_v31', JSON.stringify(state));
+  }
+
+  function saveSalary() {
+    state.stipendioBase = Number(document.getElementById('baseSalary').value);
+    saveData(); render();
+    alert("Stipendio ricorrente salvato per le proiezioni!");
   }
 
   function getCalculatedData() {
     const todayStr = new Date().toISOString().slice(0,10);
     const currentMonth = todayStr.slice(0,7);
 
-    // Saldo REALE ad oggi
     const actualBal = state.movs
       .filter(m => m.date <= todayStr)
       .reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
 
-    // Saldo INIZIALE del mese (tutto ciò che è successo prima di questo mese)
     const balBeforeMonth = state.movs
       .filter(m => m.date.slice(0,7) < currentMonth)
       .reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
@@ -182,7 +195,8 @@
 
   function renderForecast(balBeforeMonth) {
     let running = balBeforeMonth;
-    const stipendio = state.movs.filter(m => m.type === 'entrata' && m.cat.toLowerCase().includes('stipendio')).reduce((s,m)=>s+m.amt, 0);
+    const stipendioFisso = state.stipendioBase || 0;
+    
     const ricorrenti = state.buds.reduce((s, b) => {
       if(b.period === 'mensile') return s + b.amt;
       if(b.period === 'settimanale') return s + (b.amt * 4);
@@ -192,15 +206,23 @@
 
     let html = '';
     const now = new Date();
+    const currentMonthStr = now.toISOString().slice(0,7);
+
     for(let i=0; i<6; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
       const mStr = d.toISOString().slice(0,7);
+      
+      // Calcolo entrate mese specifico: reale per il mese corrente, stimato per i futuri
+      let entrataMese = (mStr === currentMonthStr) 
+        ? state.movs.filter(m => m.date.slice(0,7) === mStr && m.type === 'entrata').reduce((s,m)=>s+m.amt,0)
+        : stipendioFisso;
+
       const singoleMese = state.buds.filter(b => b.period === 'singola' && b.date.slice(0,7) === mStr).reduce((s,b)=>s+b.amt, 0);
-      
       const outMese = ricorrenti + singoleMese;
-      running = running + stipendio - outMese;
       
-      html += `<tr><td>${d.toLocaleString('it-IT',{month:'long',year:'numeric'})}</td><td class="money in">+ ${fmt(stipendio)}</td><td class="money out">- ${fmt(outMese)}</td><td style="font-weight:bold">${fmt(running)}</td></tr>`;
+      running = running + entrataMese - outMese;
+      
+      html += `<tr><td>${d.toLocaleString('it-IT',{month:'long',year:'numeric'})}</td><td class="money in">+ ${fmt(entrataMese)}</td><td class="money out">- ${fmt(outMese)}</td><td style="font-weight:bold">${fmt(running)}</td></tr>`;
     }
     document.getElementById('forecastBody').innerHTML = html;
   }
@@ -210,16 +232,17 @@
     document.getElementById('modalBody').innerHTML = b; 
     document.getElementById('detailModal').style.display = 'flex'; 
   }
-  function showActDetail() { openModal("Saldo Attuale", "Movimenti registrati fino a oggi."); }
+  
+  function showActDetail() { openModal("Saldo Attuale", "Totale movimenti reali registrati fino a oggi."); }
   function showDispDetail() { 
     const data = getCalculatedData();
     const h = data.fisseDettaglio.length ? '<table class="table">' + data.fisseDettaglio.map(f => `<tr><td>${f.cat} <small>(${f.period})</small></td><td style="text-align:right" class="money out">-${fmt(f.amt)}</td></tr>`).join('') + '</table>' : 'Nessuna spesa pendente.';
-    openModal("Dettaglio Disponibilità", `Saldo attuale meno scadenze residue:<br><br>${h}`);
+    openModal("Dettaglio Disponibilità", `Saldo attuale meno scadenze residue del mese corrente:<br><br>${h}`);
   }
-  function showSavDetail() { openModal("Risparmio", `Totale: ${fmt(state.sBal || 0)}`); }
+  function showSavDetail() { openModal("Risparmio", `Totale risparmiato: ${fmt(state.sBal || 0)}`); }
   function showFisseDetail() { 
     const data = getCalculatedData();
-    const h = data.fisseDettaglio.length ? '<table class="table">' + data.fisseDettaglio.map(f => `<tr><td>${f.cat}</td><td style="text-align:right">-${fmt(f.amt)}</td></tr>`).join('') + '</table>' : 'Fisse pagate.';
+    const h = data.fisseDettaglio.length ? '<table class="table">' + data.fisseDettaglio.map(f => `<tr><td>${f.cat}</td><td style="text-align:right" class="money out">-${fmt(f.amt)}</td></tr>`).join('') + '</table>' : 'Tutte le fisse del mese risultano pagate.';
     openModal("Fisse Residue", h); 
   }
 
@@ -228,28 +251,34 @@
     state.movs.push({ date: document.getElementById('mDate').value, type: document.getElementById('mType').value, amt: Number(document.getElementById('mAmt').value), cat: document.getElementById('mCat').value });
     render(); e.target.reset(); setDefaultDates();
   };
+  
   document.getElementById('budForm').onsubmit = e => {
     e.preventDefault();
     state.buds.push({ date: document.getElementById('bDate').value, amt: Number(document.getElementById('bAmt').value), cat: document.getElementById('bCat').value, period: document.getElementById('bPeriod').value });
     render(); e.target.reset(); setDefaultDates();
   };
+
   function delM(i) { state.movs.splice(i,1); render(); }
   function delB(i) { state.buds.splice(i,1); render(); }
+  
   function exportData() {
     const link = document.createElement('a');
     link.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state));
     link.download = `bpm_backup.json`; link.click();
   }
+  
   function importData(e) {
     const r = new FileReader();
     r.onload = x => { state = JSON.parse(x.target.result); render(); };
     r.readAsText(e.target.files[0]);
   }
+  
   function setDefaultDates() { 
     const now = new Date().toISOString().slice(0,10);
     document.getElementById('mDate').value = now;
     document.getElementById('bDate').value = now;
   }
+
   loadData(); setDefaultDates(); render();
 </script>
 </body>
