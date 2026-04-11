@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BPM FINANCIAL HUB - FIXED DATE FIX</title>
+  <title>BPM FINANCIAL HUB - DUAL CHART</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -77,8 +77,8 @@
   </div>
 
   <div class="card">
-    <h2 class="section-title">ANDAMENTO STORICO</h2>
-    <canvas id="balanceChart" height="180"></canvas>
+    <h2 class="section-title">CONFRONTO SALDI</h2>
+    <canvas id="balanceChart" height="200"></canvas>
   </div>
 
   <div class="card">
@@ -160,12 +160,12 @@
   let chart;
 
   function loadData() {
-    const saved = localStorage.getItem('bpm_mobile_v15');
+    const saved = localStorage.getItem('bpm_mobile_v16');
     if (saved) state = JSON.parse(saved);
   }
 
   function saveData() {
-    localStorage.setItem('bpm_mobile_v15', JSON.stringify(state));
+    localStorage.setItem('bpm_mobile_v16', JSON.stringify(state));
   }
 
   function openModal(title, bodyHtml) {
@@ -182,20 +182,19 @@
     const today = new Date().toISOString().slice(0,10);
     const m = state.movs.filter(x => !x.isBudgetPlan && x.date <= today);
     let h = '<table class="table">' + m.map(x => `<tr><td>${x.date}<br>${x.cat}</td><td style="text-align:right" class="money ${x.type}">${x.type==='entrata'?'+':'-'} ${fmt(x.amt)}</td></tr>`).join('') + '</table>';
-    openModal("Composizione Saldo Attuale", h || "Nessun movimento registrato fino a oggi.");
+    openModal("Saldo Attuale (Fino a Oggi)", h || "Nessun movimento registrato.");
   }
 
   function showDispDetail() {
     const realMovs = state.movs.filter(x => !x.isBudgetPlan);
     let h = '<h4>Tutti i Movimenti</h4><table class="table">' + realMovs.map(x => `<tr><td>${x.date}<br>${x.cat}</td><td style="text-align:right" class="money ${x.type}">${x.type==='entrata'?'+':'-'} ${fmt(x.amt)}</td></tr>`).join('') + '</table>';
-    h += '<h4 style="margin-top:1rem">Spese Fisse</h4><table class="table">' + state.buds.map(x => `<tr><td>${x.date}<br>${x.cat}</td><td style="text-align:right" class="money out">- ${fmt(x.amt)}</td></tr>`).join('') + '</table>';
-    openModal("Composizione Saldo Disponibile", h);
+    h += '<h4 style="margin-top:1rem">Spese Fisse Sottratte</h4><table class="table">' + state.buds.map(x => `<tr><td>${x.date}<br>${x.cat}</td><td style="text-align:right" class="money out">- ${fmt(x.amt)}</td></tr>`).join('') + '</table>';
+    openModal("Saldo Proiettato (Disponibile)", h);
   }
 
-  // DETTAGLIO SPESE FISSE CON DATA
   function showFisseDetail() {
     let h = '<table class="table">' + state.buds.map(x => `<tr><td><span class="badge">${x.period}</span> ${x.date}<br><b>${x.cat}</b></td><td style="text-align:right" class="money out">- ${fmt(x.amt)}</td></tr>`).join('') + '</table>';
-    openModal("Dettaglio Spese Fisse", h || "Nessuna spesa fissa impostata.");
+    openModal("Dettaglio Spese Fisse", h || "Nessuna spesa fissa.");
   }
 
   function exportData() {
@@ -210,7 +209,7 @@
   function importData(event) {
     const reader = new FileReader();
     reader.onload = e => {
-      try { state = JSON.parse(e.target.result); render(); alert("Dati importati!"); } catch (err) { alert("Errore!"); }
+      try { state = JSON.parse(e.target.result); render(); alert("Importato!"); } catch (err) { alert("Errore!"); }
     };
     reader.readAsText(event.target.files[0]);
   }
@@ -219,8 +218,35 @@
     const ctx = document.getElementById('balanceChart').getContext('2d');
     chart = new Chart(ctx, {
       type: 'line',
-      data: { labels: [], datasets: [{ label: 'Saldo Storico', data: [], borderColor: '#01696f', tension: 0.3, fill: true, backgroundColor: 'rgba(1, 105, 111, 0.05)' }] },
-      options: { responsive: true }
+      data: { 
+        labels: [], 
+        datasets: [
+          { 
+            label: 'Saldo Attuale', 
+            data: [], 
+            borderColor: '#009966', 
+            backgroundColor: 'rgba(0,153,102,0.05)', 
+            tension: 0.3, 
+            fill: true,
+            pointRadius: 2
+          },
+          { 
+            label: 'Saldo Disponibile', 
+            data: [], 
+            borderColor: '#01696f', 
+            borderDash: [5, 5],
+            tension: 0.3, 
+            fill: false,
+            pointRadius: 2
+          }
+        ] 
+      },
+      options: { 
+        responsive: true,
+        plugins: {
+          legend: { position: 'top' }
+        }
+      }
     });
   }
 
@@ -251,15 +277,39 @@
         <button class="btn-del" onclick="delB(${i})">🗑️</button>
       </div>`).join('');
 
-    updateChart();
+    updateChart(today, tBud);
     saveData();
   }
 
-  function updateChart() {
-    const realMovs = state.movs.filter(m => !m.isBudgetPlan).sort((a,b)=>new Date(a.date)-new Date(b.date));
-    let r = 0; const l = []; const v = [];
-    realMovs.forEach(m => { r += (m.type === 'entrata' ? m.amt : -m.amt); l.push(m.date); v.push(r); });
-    chart.data.labels = l; chart.data.datasets[0].data = v; chart.update();
+  function updateChart(today, tBud) {
+    const sortedMovs = [...state.movs.filter(m => !m.isBudgetPlan)].sort((a,b)=>new Date(a.date)-new Date(b.date));
+    const labels = sortedMovs.map(m => m.date);
+    
+    let runningActual = 0;
+    let runningDisp = 0;
+    
+    const dataActual = [];
+    const dataDisp = [];
+
+    sortedMovs.forEach(m => {
+      const val = (m.type === 'entrata' ? m.amt : -m.amt);
+      runningActual += val;
+      runningDisp += val;
+      
+      // La linea "attuale" si ferma a oggi
+      if (m.date <= today) {
+        dataActual.push(runningActual);
+      } else {
+        dataActual.push(null);
+      }
+      // La linea "disponibile" prosegue sottraendo già le fisse totali
+      dataDisp.push(runningDisp - tBud);
+    });
+
+    chart.data.labels = labels;
+    chart.data.datasets[0].data = dataActual;
+    chart.data.datasets[1].data = dataDisp;
+    chart.update();
   }
 
   document.getElementById('movForm').onsubmit = e => {
