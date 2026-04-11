@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BPM FINANCIAL HUB - V42 RESTORED BUDGET</title>
+  <title>BPM FINANCIAL HUB - V43 APRIL DYNAMICS</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -34,6 +34,7 @@
     .modal-content { background: white; padding: 1.5rem; border-radius: 1rem; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
     .btn-icon { background: none; border: none; font-size: 1.1rem; cursor: pointer; width: auto; padding: 0; margin-left: 5px; }
     .badge { font-size: 0.6rem; padding: 2px 5px; border-radius: 4px; background: #01696f; color: white; text-transform: uppercase; }
+    .edit-input { width: 80px; padding: 4px; border: 1px solid var(--save); border-radius: 4px; text-align: right; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -72,6 +73,7 @@
   <div class="card">
     <h2 class="section-title">PROIEZIONE 6 MESI</h2>
     <table class="table"><thead style="background:#f9f9f9"><tr><th>Mese</th><th>Entrate*</th><th>Uscite*</th><th>Saldo Finale</th></tr></thead><tbody id="forecastBody"></tbody></table>
+    <small style="color:gray; font-size:0.65rem">*Include stipendio previsto (se non registrato) e movimenti reali.</small>
   </div>
 
   <div id="detailModal" class="modal" onclick="closeModal()">
@@ -106,14 +108,13 @@
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:5px">
         <input type="date" id="bDate" required>
         <select id="bPeriod">
-            <option value="mensile">Ogni Mese (Ricorrente)</option>
-            <option value="singola">Singola (Una Tantum)</option>
-            <option value="settimanale">Settimanale</option>
+            <option value="mensile">Ogni Mese</option>
+            <option value="singola">Una Tantum</option>
         </select>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
         <input type="number" id="bAmt" step="0.01" placeholder="Importo €" required>
-        <input type="text" id="bCat" placeholder="Nome Scadenza (es. Affitto)" required>
+        <input type="text" id="bCat" placeholder="Nome Scadenza" required>
       </div>
       <button type="submit" class="primary" style="margin-top:5px">Aggiungi Spesa Fissa</button>
     </form>
@@ -140,13 +141,13 @@
   let editingId = null;
 
   function loadData() {
-    const saved = localStorage.getItem('bpm_v42');
+    const saved = localStorage.getItem('bpm_v43');
     if (saved) state = JSON.parse(saved);
     document.getElementById('baseSalary').value = state.stipendioBase || 0;
     document.getElementById('alertLimit').value = state.alertLimit || 400;
   }
 
-  function saveData() { localStorage.setItem('bpm_v42', JSON.stringify(state)); }
+  function saveData() { localStorage.setItem('bpm_v43', JSON.stringify(state)); }
 
   function saveConfig() {
     state.stipendioBase = Number(document.getElementById('baseSalary').value);
@@ -159,7 +160,7 @@
       if(amt && !isNaN(amt)) {
           const val = Number(amt);
           state.sBal += val;
-          state.movs.push({ date: new Date().toISOString().slice(0,10), source: 'banca', type: 'uscita', amt: val, cat: "💎 Accantonamento Risparmio" });
+          state.movs.push({ date: new Date().toISOString().slice(0,10), source: 'banca', type: 'uscita', amt: val, cat: "💎 Risparmio" });
           render();
       }
   }
@@ -167,10 +168,17 @@
   function getCalculatedData() {
     const todayStr = new Date().toISOString().slice(0,10);
     const curMonth = todayStr.slice(0,7);
+
+    // Saldo REALE oggi
     const bancaBal = state.movs.filter(m => m.date <= todayStr && m.source === 'banca').reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
     const cashBal = state.movs.filter(m => m.source === 'contanti').reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
+    
+    // Saldo all'inizio del mese corrente
+    const balStartOfMonth = state.movs.filter(m => m.date.slice(0,7) < curMonth && m.source === 'banca').reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
+
+    // Controlla stipendio previsto
     const stipGiaPreso = state.movs.some(m => m.date.slice(0,7) === curMonth && m.type === 'entrata' && m.cat.toLowerCase().includes('stipendio'));
-    const stipFuturo = stipGiaPreso ? 0 : (state.stipendioBase || 0);
+    const stipPrevisto = stipGiaPreso ? 0 : (state.stipendioBase || 0);
 
     let fisseRes = 0;
     state.buds.forEach(f => {
@@ -178,12 +186,13 @@
       if(!pagata) fisseRes += f.amt;
     });
 
-    return { bancaBal, cashBal, avail: bancaBal + stipFuturo - fisseRes, fisseRes };
+    return { bancaBal, cashBal, balStartOfMonth, avail: bancaBal + stipPrevisto - fisseRes, fisseRes };
   }
 
   function render() {
     const data = getCalculatedData();
     const today = new Date().toISOString().slice(0,10);
+    
     document.getElementById('actBal').textContent = fmt(data.bancaBal);
     document.getElementById('curBal').textContent = fmt(data.avail);
     document.getElementById('savBal').textContent = fmt(state.sBal);
@@ -192,11 +201,9 @@
     const banner = document.getElementById('alertBanner');
     banner.style.display = 'block';
     if(data.avail < state.alertLimit) {
-        banner.className = 'alert-warn';
-        banner.textContent = `🚨 SOGLIA CRITICA: ${fmt(data.avail)}`;
+        banner.className = 'alert-warn'; banner.textContent = `🚨 SOGLIA CRITICA: ${fmt(data.avail)}`;
     } else {
-        banner.className = 'alert-ok';
-        banner.textContent = `✅ DISPONIBILITÀ OK`;
+        banner.className = 'alert-ok'; banner.textContent = `✅ DISPONIBILITÀ OK`;
     }
 
     const sorted = [...state.movs].sort((a,b) => new Date(b.date) - new Date(a.date));
@@ -215,20 +222,19 @@
       </tr>`;
     }).join('');
 
-    // Rendering lista Spese Fisse
     document.getElementById('budList').innerHTML = state.buds.map((b,i) => `
       <div style="display:flex;justify-content:space-between;padding:8px;background:#f9f9f9;margin-bottom:5px;border-radius:8px;border-left:4px solid var(--accent)">
         <span><small>${b.period}</small> ${b.cat}: <b>${fmt(b.amt)}</b></span>
         <button onclick="delB(${i})" style="background:none;border:none;cursor:pointer">🗑️</button>
       </div>`).join('');
 
-    renderForecast(data.bancaBal);
+    renderForecast(data.balStartOfMonth);
     updateChart(today, data.fisseRes);
     saveData();
   }
 
-  function renderForecast(bancaBal) {
-    let running = bancaBal;
+  function renderForecast(balStartOfMonth) {
+    let running = balStartOfMonth;
     const stipBase = state.stipendioBase || 0;
     const fisseMensili = state.buds.reduce((s,b) => s + (b.period==='mensile'?b.amt:0), 0);
     let html = '';
@@ -238,15 +244,18 @@
     for(let i=0; i<6; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
       const mStr = d.toISOString().slice(0,7);
+      
       const movsIn = state.movs.filter(m => m.date.slice(0,7) === mStr && m.source === 'banca' && m.type === 'entrata').reduce((s,m)=>s+m.amt, 0);
       const movsOut = state.movs.filter(m => m.date.slice(0,7) === mStr && m.source === 'banca' && m.type === 'uscita').reduce((s,m)=>s+m.amt, 0);
       
+      // LOGICA DINAMICA: Stipendio base aggiunto solo se non c'è già un'entrata "stipendio" reale
       let inMese = movsIn;
-      if (mStr > curMonthStr) inMese += stipBase; 
-      else if (mStr === curMonthStr && !state.movs.some(m => m.date.slice(0,7) === mStr && m.cat.toLowerCase().includes('stipendio'))) inMese += stipBase;
+      const haGiaStip = state.movs.some(m => m.date.slice(0,7) === mStr && m.cat.toLowerCase().includes('stipendio'));
+      if (!haGiaStip) inMese += stipBase;
 
       const outMese = fisseMensili + movsOut;
       running = running + inMese - outMese;
+      
       html += `<tr><td>${d.toLocaleString('it-IT',{month:'short',year:'2-digit'})}</td><td class="money in">+${fmt(inMese)}</td><td class="money out">-${fmt(outMese)}</td><td style="font-weight:bold">${fmt(running)}</td></tr>`;
     }
     document.getElementById('forecastBody').innerHTML = html;
@@ -284,13 +293,13 @@
   function closeModal() { document.getElementById('detailModal').style.display = 'none'; }
   function openModal(t, b) { document.getElementById('modalTitle').innerText = t; document.getElementById('modalBody').innerHTML = b; document.getElementById('detailModal').style.display = 'flex'; }
   function showActDetail() { openModal("Saldo Banca", "Totale reale sul conto oggi."); }
-  function showDispDetail() { openModal("Disponibilità", "Saldo + Stipendio Previsto - Fisse Residue del mese."); }
+  function showDispDetail() { openModal("Analisi Disponibilità", "Saldo + Stipendio Previsto - Fisse Residue."); }
   function showSavDetail() { openModal("Risparmio", `Accumulo: ${fmt(state.sBal)}`); }
   function showCashDetail() { openModal("Contanti", "Denaro fisico registrato."); }
   function toggleEdit(i) { editingId = i; render(); }
   function saveEdit(i) { state.movs[i].amt = Number(document.getElementById(`edit-${i}`).value); editingId = null; render(); }
   function delM(i) { if(confirm("Eliminare?")) { state.movs.splice(i,1); render(); } }
-  function delB(i) { if(confirm("Eliminare questa spesa fissa?")) { state.buds.splice(i,1); render(); } }
+  function delB(i) { if(confirm("Eliminare fissa?")) { state.buds.splice(i,1); render(); } }
 
   document.getElementById('movForm').onsubmit = e => {
     e.preventDefault();
@@ -305,7 +314,7 @@
   };
 
   function exportData() {
-    const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'bpm_v42.json'; a.click();
+    const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'bpm_v43.json'; a.click();
   }
   function importData(e) {
     const r = new FileReader(); r.onload = x => { state = JSON.parse(x.target.result); render(); }; r.readAsText(e.target.files[0]);
