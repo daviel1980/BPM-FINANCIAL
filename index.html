@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BPM FINANCIAL HUB - SMART DATE</title>
+  <title>BPM FINANCIAL HUB - PROIEZIONE TOTALE</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -45,7 +45,7 @@
   <div class="card">
     <div class="stats">
       <div class="stat"><div class="stat-label">Saldo Attuale (Oggi)</div><div id="actBal" class="stat-value">0 €</div></div>
-      <div class="stat"><div class="stat-label">Saldo Disponibile</div><div id="curBal" class="stat-value">0 €</div></div>
+      <div class="stat"><div class="stat-label">Saldo Disp. (Proiettato)</div><div id="curBal" class="stat-value">0 €</div></div>
       <div class="stat"><div class="stat-label">Carta Risparmio</div><div id="savBal" class="stat-value">0 €</div></div>
       <div class="stat"><div class="stat-label">Fisse Previste</div><div id="budTot" class="stat-value">0 €</div></div>
     </div>
@@ -136,12 +136,12 @@
   let chart;
 
   function loadData() {
-    const saved = localStorage.getItem('bpm_mobile_v12');
+    const saved = localStorage.getItem('bpm_mobile_v13');
     if (saved) state = JSON.parse(saved);
   }
 
   function saveData() {
-    localStorage.setItem('bpm_mobile_v12', JSON.stringify(state));
+    localStorage.setItem('bpm_mobile_v13', JSON.stringify(state));
   }
 
   function exportData() {
@@ -179,14 +179,14 @@
     const today = new Date().toISOString().slice(0,10);
     const realMovs = state.movs.filter(m => !m.isBudgetPlan);
     
-    // LOGICA CORRETTA: Saldo attuale filtra solo i movimenti fino a OGGI
+    // 1. SALDO ATTUALE: Solo movimenti fino a OGGI
     const movsUntilToday = realMovs.filter(m => m.date <= today);
-    const tIn = movsUntilToday.filter(m => m.type==='entrata').reduce((s,m)=>s+m.amt, 0);
-    const tOut = movsUntilToday.filter(m => m.type==='uscita').reduce((s,m)=>s+m.amt, 0);
-    const actualBal = tIn - tOut;
+    const actualBal = movsUntilToday.reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
 
+    // 2. SALDO DISPONIBILE (PROIETTATO): Include TUTTE le entrate e uscite (anche future) + spese fisse
+    const totalMovsBalance = realMovs.reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
     const tBud = state.buds.reduce((s,b)=>s+b.amt, 0);
-    const availBal = actualBal - tBud;
+    const availBal = totalMovsBalance - tBud;
 
     document.getElementById('actBal').textContent = fmt(actualBal);
     document.getElementById('curBal').textContent = fmt(availBal);
@@ -194,7 +194,7 @@
     document.getElementById('budTot').textContent = fmt(tBud);
     document.getElementById('alertLow').style.display = availBal < 400 ? 'block' : 'none';
 
-    // Riepiloghi reali
+    // Riepiloghi reali (solo su movimenti effettivamente avvenuti fino a oggi)
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7*24*60*60*1000).toISOString().slice(0,10);
     const monthStart = now.toISOString().slice(0,7) + "-01";
