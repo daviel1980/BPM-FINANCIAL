@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BPM FINANCIAL HUB - V36 FINAL RECOVERY</title>
+  <title>BPM FINANCIAL HUB - V37 PREDICTION FIX</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -43,29 +43,21 @@
       <div class="stat" onclick="showActDetail()"><div class="stat-label">Saldo Banca</div><div id="actBal" class="stat-value">0 €</div></div>
       <div class="stat" onclick="showCashDetail()"><div class="stat-label" style="color:var(--cash)">Cassa Contante</div><div id="cashBal" class="stat-value">0 €</div></div>
       <div class="stat" onclick="showSavDetail()"><div class="stat-label" style="color:var(--save)">Carta Risparmio</div><div id="savBal" class="stat-value">0 €</div></div>
-      <div class="stat" onclick="showDispDetail()"><div class="stat-label">Disponibile</div><div id="curBal" class="stat-value">0 €</div></div>
-    </div>
-  </div>
-
-  <div class="card">
-    <h2 class="section-title">AZIONI RAPIDE</h2>
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px">
-      <button onclick="transferToSaving()" style="background:var(--save); color:white; border:none; cursor:pointer; font-weight:bold; padding:10px; border-radius:8px">➡️ Sposta in Risparmio</button>
-      <button onclick="addCashFund()" style="background:var(--cash); color:white; border:none; cursor:pointer; font-weight:bold; padding:10px; border-radius:8px">➕ Carica Contante</button>
+      <div class="stat" onclick="showDispDetail()"><div class="stat-label">Disponibile (Fine Mese)</div><div id="curBal" class="stat-value">0 €</div></div>
     </div>
   </div>
 
   <div class="card">
     <h2 class="section-title">CONFIGURAZIONE HUB</h2>
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px">
-      <div><label style="font-size:0.7rem">Stipendio Ricorrente</label><input type="number" id="baseSalary"></div>
-      <div><label style="font-size:0.7rem">Saldo Risparmio</label><input type="number" id="manualSav"></div>
+      <div><label style="font-size:0.7rem">Stipendio Previsto (€)</label><input type="number" id="baseSalary"></div>
+      <div><label style="font-size:0.7rem">Saldo Risparmio (€)</label><input type="number" id="manualSav"></div>
     </div>
-    <button onclick="saveConfig()" class="primary" style="margin-top:10px">Salva Parametri</button>
+    <button onclick="saveConfig()" class="primary" style="margin-top:10px">Salva Configurazione</button>
   </div>
 
   <div class="card">
-    <h2 class="section-title">ANDAMENTO SALDI</h2>
+    <h2 class="section-title">ANDAMENTO BANCA</h2>
     <canvas id="balanceChart" height="200"></canvas>
   </div>
 
@@ -85,7 +77,7 @@
   </div>
 
   <div class="card">
-    <h2 class="section-title">NUOVO MOVIMENTO</h2>
+    <h2 class="section-title">REGISTRA MOVIMENTO</h2>
     <form id="movForm">
       <input type="date" id="mDate" required>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:5px 0">
@@ -94,14 +86,14 @@
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
         <input type="number" id="mAmt" step="0.01" placeholder="Importo €" required>
-        <input type="text" id="mCat" placeholder="Nota" required>
+        <input type="text" id="mCat" placeholder="Descrizione" required>
       </div>
       <button type="submit" class="primary" style="margin-top:5px">Registra</button>
     </form>
   </div>
 
   <div class="card">
-    <h2 class="section-title">PROGRAMMA SPESE FISSE</h2>
+    <h2 class="section-title">SPESE FISSE RICORRENTI</h2>
     <form id="budForm">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:5px">
         <input type="date" id="bDate" required>
@@ -136,35 +128,50 @@
   let editingId = null;
 
   function loadData() {
-    const saved = localStorage.getItem('bpm_v36');
+    const saved = localStorage.getItem('bpm_v37');
     if (saved) state = JSON.parse(saved);
     document.getElementById('baseSalary').value = state.stipendioBase || "";
     document.getElementById('manualSav').value = state.sBal || "";
   }
 
-  function saveData() { localStorage.setItem('bpm_v36', JSON.stringify(state)); }
+  function saveData() { localStorage.setItem('bpm_v37', JSON.stringify(state)); }
 
   function saveConfig() {
     state.stipendioBase = Number(document.getElementById('baseSalary').value);
     state.sBal = Number(document.getElementById('manualSav').value);
     saveData(); render();
-    alert("Hub Aggiornato!");
+    alert("Parametri aggiornati!");
   }
 
   function getCalculatedData() {
     const todayStr = new Date().toISOString().slice(0,10);
     const curMonth = todayStr.slice(0,7);
+
+    // Saldo Banca Reale
     const bancaBal = state.movs.filter(m => m.date <= todayStr && m.source === 'banca').reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
+    // Saldo Contanti
     const cashBal = state.movs.filter(m => m.source === 'contanti').reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
     
+    // Controllo se lo stipendio è stato già registrato questo mese
+    const stipendioGiaInserito = state.movs.some(m => m.date.slice(0,7) === curMonth && m.type === 'entrata' && m.cat.toLowerCase().includes('stipendio'));
+    const stipendioDaAggiungere = stipendioGiaInserito ? 0 : (state.stipendioBase || 0);
+
+    // Calcolo Fisse Residue
     let fisseRes = 0;
-    const fisseList = [];
+    const fisseMese = [];
     state.buds.forEach(f => {
       const pagata = state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.toLowerCase().includes(f.cat.toLowerCase()));
-      if(!pagata) { fisseRes += f.amt; fisseList.push(f); }
+      if(!pagata) { fisseRes += f.amt; fisseMese.push(f); }
     });
 
-    return { bancaBal, cashBal, availBal: bancaBal - fisseRes, fisseRes, fisseList };
+    return { 
+      bancaBal, 
+      cashBal, 
+      stipendioDaAggiungere,
+      fisseRes,
+      availBal: bancaBal + stipendioDaAggiungere - fisseRes,
+      fisseMese 
+    };
   }
 
   function render() {
@@ -237,38 +244,20 @@
     chart = new Chart(ctx, {
       type: 'line',
       data: { datasets: [
-        {label:'Banca',borderColor:'#009966',pointRadius:0,fill:false},
-        {label:'Disp.',borderColor:'#01696f',borderDash:[5,5],pointRadius:0,fill:false}
+        {label:'Banca Reale',borderColor:'#009966',pointRadius:0,fill:false},
+        {label:'Disponibile',borderColor:'#01696f',borderDash:[5,5],pointRadius:0,fill:false}
       ] },
       options: { responsive: true, scales: { x: { display: true, ticks: {font:{size:8}} } } }
     });
   }
 
-  // --- LOGICA BOTTONI ---
   function toggleEdit(i) { editingId = i; render(); }
   function saveEdit(i) {
     state.movs[i].amt = Number(document.getElementById(`edit-${i}`).value);
     editingId = null; render();
   }
   function delM(i) { if(confirm("Eliminare movimento?")) { state.movs.splice(i,1); render(); } }
-  function delB(i) { if(confirm("Eliminare fissa?")) { state.buds.splice(i,1); render(); } }
-
-  function transferToSaving() {
-    const amt = prompt("Importo da spostare in Risparmio?");
-    if(amt) {
-      state.sBal += Number(amt);
-      state.movs.push({date:new Date().toISOString().slice(0,10), source:'banca', type:'uscita', amt:Number(amt), cat:'➡️ Risparmio'});
-      render();
-    }
-  }
-  function addCashFund() {
-    const amt = prompt("Importo contanti prelevati?");
-    if(amt) {
-      state.movs.push({date:new Date().toISOString().slice(0,10), source:'banca', type:'uscita', amt:Number(amt), cat:'🏧 Prelievo Contanti'});
-      state.movs.push({date:new Date().toISOString().slice(0,10), source:'contanti', type:'entrata', amt:Number(amt), cat:'💵 Carico Cassa'});
-      render();
-    }
-  }
+  function delB(i) { if(confirm("Eliminare spesa fissa?")) { state.buds.splice(i,1); render(); } }
 
   document.getElementById('movForm').onsubmit = e => {
     e.preventDefault();
@@ -295,18 +284,26 @@
 
   function openModal(t, b) { document.getElementById('modalTitle').innerText = t; document.getElementById('modalBody').innerHTML = b; document.getElementById('detailModal').style.display = 'flex'; }
   function closeModal() { document.getElementById('detailModal').style.display = 'none'; }
-  function showActDetail() { openModal("Dettaglio Banca", "Somma dei movimenti reali sul conto."); }
-  function showCashDetail() { openModal("Dettaglio Cassa", "Somma dei movimenti in contanti registrati."); }
-  function showSavDetail() { openModal("Carta Risparmio", `Totale: ${fmt(state.sBal)}`); }
+  function showActDetail() { openModal("Dettaglio Banca", "Somma dei movimenti reali registrati."); }
+  function showCashDetail() { openModal("Dettaglio Cassa", "Somma dei movimenti contanti."); }
+  function showSavDetail() { openModal("Carta Risparmio", `Saldo manuale: ${fmt(state.sBal)}`); }
   function showDispDetail() { 
-    const data = getCalculatedData();
-    const h = data.fisseList.length ? data.fisseList.map(f => `<div>${f.cat}: -${fmt(f.amt)}</div>`).join('') : "Nessuna fissa residua.";
-    openModal("Disponibilità", `Calcolo fine mese:<br>${h}`);
+    const d = getCalculatedData();
+    let resHtml = d.fisseMese.length ? d.fisseMese.map(f => `<div>${f.cat}: -${fmt(f.amt)}</div>`).join('') : "Nessuna spesa residua.";
+    let stipHtml = d.stipendioDaAggiungere > 0 ? `<div style="color:green">Stipendio Previsto: +${fmt(d.stipendioDaAggiungere)}</div>` : `<div style="color:gray">Stipendio già registrato</div>`;
+    openModal("Logica Disponibilità", `
+        <b>Saldo Banca:</b> ${fmt(d.bancaBal)}<br>
+        ${stipHtml}
+        <hr>
+        <b>Spese da pagare:</b><br>${resHtml}
+        <hr>
+        <b>FINALE:</b> ${fmt(d.availBal)}
+    `);
   }
 
   function exportData() {
     const blob = new Blob([JSON.stringify(state)], {type: "application/json"});
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'bpm_v36.json'; a.click();
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'bpm_v37.json'; a.click();
   }
   function importData(e) {
     const r = new FileReader();
