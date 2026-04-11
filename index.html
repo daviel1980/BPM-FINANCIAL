@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BPM FINANCIAL HUB - V53 APRIL RECONCILIATION</title>
+  <title>BPM FINANCIAL HUB - V54 DEFINITIVE ALIGNMENT</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -14,31 +14,25 @@
     .v-stack { display: flex; flex-direction: column; gap: 1rem; max-width: 700px; margin: 0 auto; }
     .card { background: var(--card-bg); border-radius: 1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.05); padding: 1.25rem; }
     .title { margin: 0; font-size: 1.5rem; color: var(--accent); text-align: center; font-weight: 800; }
-    
     .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.5rem; }
     .stat { padding: 0.85rem; background: var(--accent-light); border-radius: 0.75rem; cursor: pointer; position: relative; border: 1px solid transparent; transition: 0.2s; }
     .stat-label { font-size: 0.65rem; color: var(--accent); font-weight: 700; text-transform: uppercase; pointer-events: none; }
     .stat-date { font-size: 0.6rem; color: gray; margin-bottom: 2px; }
     .stat-value { font-size: 1.15rem; font-weight: 800; pointer-events: none; }
-    
     .quick-actions { display: flex; gap: 4px; position: absolute; top: 8px; right: 8px; }
     .btn-small { background: white; border: 1px solid currentColor; font-weight: 700; padding: 2px 4px; font-size: 0.55rem; border-radius: 4px; cursor: pointer; }
-    
     #alertBanner { padding: 0.75rem; border-radius: 0.75rem; font-weight: 700; text-align: center; font-size: 0.85rem; margin-top: 0.5rem; display: none; }
     .alert-ok { background: #dcfce7; color: #166534; }
     .alert-warn { background: #fee2e2; color: #991b1b; }
-
     .section-title { margin-bottom: 0.8rem; font-size: 1rem; font-weight: 600; border-bottom: 2px solid var(--accent); padding-bottom: 0.3rem; display: inline-block; }
     input, select, button { border-radius: 0.5rem; border: 1px solid var(--border); padding: 0.6rem; font-size: 0.875rem; width: 100%; box-sizing: border-box; }
     button.primary { background: var(--accent); color: #fff; border: none; font-weight: 600; cursor: pointer; }
-    
     .table { width: 100%; border-collapse: collapse; }
     .table td { padding: 0.6rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
     .money.in { color: var(--in); font-weight: 600; }
     .money.out { color: var(--out); font-weight: 600; }
-    
     .modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
-    .modal-content { background: white; padding: 1.5rem; border-radius: 1rem; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
+    .modal-content { background: white; padding: 1.5rem; border-radius: 1rem; width: 90%; max-width: 550px; max-height: 85vh; overflow-y: auto; }
   </style>
 </head>
 <body>
@@ -78,19 +72,19 @@
   </div>
 
   <div class="card">
-    <h2 class="section-title">ANDAMENTO PATRIMONIALE</h2>
+    <h2 class="section-title">CONFRONTO SALDI REALI</h2>
     <canvas id="balanceChart" height="200"></canvas>
   </div>
 
   <div class="card">
-    <h2 class="section-title">PROIEZIONE FINE MESE (MESE X MESE)</h2>
-    <table class="table"><thead style="background:#f9f9f9"><tr><th>Mese</th><th>Entrate</th><th>Uscite</th><th>Fine Mese</th></tr></thead><tbody id="forecastBody"></tbody></table>
+    <h2 class="section-title">PROIEZIONI FINE MESE (CERTIFICATE)</h2>
+    <table class="table"><thead style="background:#f9f9f9"><tr><th>Mese</th><th>Entrate Tot</th><th>Uscite Tot</th><th>Saldo Finale</th></tr></thead><tbody id="forecastBody"></tbody></table>
   </div>
 
   <div id="detailModal" class="modal" onclick="closeModal()">
     <div class="modal-content" onclick="event.stopPropagation()">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-        <h3 id="modalTitle" style="margin:0; color:var(--accent)">Dettaglio</h3>
+        <h3 id="modalTitle" style="margin:0">Dettaglio</h3>
         <button onclick="closeModal()">CHIUDI</button>
       </div>
       <div id="modalBody"></div>
@@ -107,35 +101,35 @@
       </div>
       <input type="number" id="mAmt" step="0.01" placeholder="Importo €" required style="margin-bottom:5px">
       <input type="text" id="mCat" placeholder="Descrizione" required style="margin-bottom:5px">
-      <button type="submit" class="primary">Registra</button>
+      <button type="submit" class="primary">Registra Movimento</button>
     </form>
   </div>
 
   <div class="card">
-    <h2 class="section-title">PROGRAMMA SPESE FISSE</h2>
+    <h2 class="section-title">SPESE FISSE RICORRENTI</h2>
     <form id="budForm">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:5px">
         <input type="date" id="bDate" required>
         <select id="bPeriod"><option value="mensile">Ogni Mese</option><option value="singola">Singola</option></select>
       </div>
       <input type="number" id="bAmt" step="0.01" placeholder="Importo €" required style="margin-bottom:5px">
-      <input type="text" id="bCat" placeholder="Nome Scadenza" required style="margin-bottom:5px">
-      <button type="submit" class="primary">Salva Fissa</button>
+      <input type="text" id="bCat" placeholder="Nome Spesa" required style="margin-bottom:5px">
+      <button type="submit" class="primary">Salva Spesa Fissa</button>
     </form>
     <div id="budList" style="margin-top:10px"></div>
   </div>
 
   <div class="card">
-    <h2 class="section-title">HUB SETTINGS</h2>
+    <h2 class="section-title">CONFIGURAZIONE</h2>
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px">
-      <div><label style="font-size:0.7rem">Stipendio (€)</label><input type="number" id="baseSalary"></div>
+      <div><label style="font-size:0.7rem">Stipendio Mensile (€)</label><input type="number" id="baseSalary"></div>
       <div><label style="font-size:0.7rem">Soglia Alert (€)</label><input type="number" id="alertLimit" value="400"></div>
     </div>
-    <button onclick="saveConfig()" class="primary" style="margin-top:10px">Aggiorna</button>
+    <button onclick="saveConfig()" class="primary" style="margin-top:10px">Aggiorna Parametri</button>
   </div>
 
   <div class="card">
-    <h2 class="section-title">STORICO MOVIMENTI</h2>
+    <h2 class="section-title">STORICO TRANSAZIONI</h2>
     <table class="table"><tbody id="rows"></tbody></table>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:1rem">
       <button onclick="exportData()">Backup</button>
@@ -153,12 +147,12 @@
   let chart;
 
   function loadData() {
-    const saved = localStorage.getItem('bpm_v53');
+    const saved = localStorage.getItem('bpm_v54');
     if (saved) state = JSON.parse(saved);
     document.getElementById('baseSalary').value = state.stipendioBase || 0;
     document.getElementById('alertLimit').value = state.alertLimit || 400;
   }
-  function saveData() { localStorage.setItem('bpm_v53', JSON.stringify(state)); }
+  function saveData() { localStorage.setItem('bpm_v54', JSON.stringify(state)); }
 
   function manageFunds(action) {
     let amt = prompt("Importo:");
@@ -177,9 +171,10 @@
   function getCalculatedData() {
     const today = new Date().toISOString().slice(0,10);
     const curMonth = today.slice(0,7);
+    
+    // Saldo Banca REALE oggi (include tutto ciò datato <= oggi)
     const bancaBal = state.movs.filter(m => m.date <= today && m.source === 'banca').reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
     const cashBal = state.movs.filter(m => m.source === 'contanti' && m.date <= today).reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
-    const balPreMonth = state.movs.filter(m => m.date.slice(0,7) < curMonth && m.source === 'banca').reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
     
     const haStipReale = state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.toLowerCase().includes('stipendio') && m.type === 'entrata');
     const stipDaAggiungere = haStipReale ? 0 : (state.stipendioBase || 0);
@@ -191,7 +186,11 @@
       if(!pagata) { fisseRes += f.amt; fisseList.push(f); }
     });
 
-    return { bancaBal, cashBal, balPreMonth, avail: bancaBal + stipDaAggiungere - fisseRes, fisseRes, fisseList, stipDaAggiungere };
+    // Movimenti reali futuri inseriti per questo mese (es. spese il 20 aprile se oggi è l'11)
+    const realFuturoMese = state.movs.filter(m => m.date.slice(0,7) === curMonth && m.date > today && m.source === 'banca')
+                                     .reduce((s,m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
+
+    return { bancaBal, cashBal, avail: bancaBal + stipDaAggiungere - fisseRes + realFuturoMese, fisseRes, fisseList, stipDaAggiungere };
   }
 
   function render() {
@@ -222,44 +221,59 @@
         <button onclick="delB(${i})" style="background:none;border:none;cursor:pointer">🗑️</button>
       </div>`).join('');
 
-    renderForecast(data.balPreMonth);
+    renderForecast();
     updateChart(data.bancaBal, data.fisseRes);
     saveData();
   }
 
-  function renderForecast(balPreMonth) {
-    let running = balPreMonth;
+  function renderForecast() {
+    const today = new Date().toISOString().slice(0,10);
+    const curMonthStr = today.slice(0,7);
     const stipBase = state.stipendioBase || 0;
     const fisseMensili = state.buds.reduce((s,b) => s + (b.period==='mensile'?b.amt:0), 0);
+
+    // IL PUNTO DI PARTENZA È IL SALDO REALE AD OGGI
+    let runningBalance = state.movs.filter(m => m.date <= today && m.source === 'banca')
+                                   .reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
+    
     let html = '';
     const now = new Date();
-    const curMonthStr = now.toISOString().slice(0,7);
 
     for(let i=0; i<6; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
       const mStr = d.toISOString().slice(0,7);
       
-      // FIX V53: Calcolo entrate e uscite reali del mese isolandole per il mese di competenza
-      const movsIn = state.movs.filter(m => m.date.slice(0,7) === mStr && m.source === 'banca' && m.type === 'entrata').reduce((s,m)=>s+m.amt, 0);
-      const movsOut = state.movs.filter(m => m.date.slice(0,7) === mStr && m.source === 'banca' && m.type === 'uscita').reduce((s,m)=>s+m.amt, 0);
-      
-      let inMese = movsIn;
-      const haGiaStip = state.movs.some(m => m.date.slice(0,7) === mStr && m.cat.toLowerCase().includes('stipendio'));
+      let inMese = 0;
+      let outMese = 0;
+
+      // 1. GESTIONE MOVIMENTI REALI (Storico)
+      // Se è il mese corrente, contiamo solo i movimenti REALI FUTURI (quelli passati sono già nel runningBalance)
+      // Se è un mese futuro, contiamo tutti i movimenti REALI già inseriti per quel mese
+      state.movs.filter(m => m.date.slice(0,7) === mStr && m.source === 'banca').forEach(m => {
+          if (mStr > curMonthStr || (mStr === curMonthStr && m.date > today)) {
+              if (m.type === 'entrata') inMese += m.amt;
+              else outMese += m.amt;
+          }
+      });
+
+      // 2. GESTIONE STIPENDIO PREVISTO
+      // Lo aggiungiamo solo se non esiste già un'entrata "stipendio" reale in quel mese
+      const haGiaStip = state.movs.some(m => m.date.slice(0,7) === mStr && m.cat.toLowerCase().includes('stipendio') && m.type === 'entrata');
       if (!haGiaStip) inMese += stipBase;
 
-      let outMese = movsOut;
+      // 3. GESTIONE FISSE
       if (mStr === curMonthStr) {
-          // Per il mese attuale, le uscite previste sono le fisse non ancora pagate
+          // Per aprile: contiamo solo le fisse non ancora pagate
           state.buds.forEach(f => {
               if(!state.movs.some(m => m.date.slice(0,7) === curMonthStr && m.cat.toLowerCase().includes(f.cat.toLowerCase()))) outMese += f.amt;
           });
       } else {
-          // Per i mesi futuri aggiungiamo le fisse ricorrenti
+          // Per i mesi futuri: contiamo tutte le fisse mensili
           outMese += fisseMensili;
       }
 
-      running = running + inMese - outMese;
-      html += `<tr><td>${d.toLocaleString('it-IT',{month:'short',year:'2-digit'})}</td><td class="money in">+${fmt(inMese)}</td><td class="money out">-${fmt(outMese)}</td><td style="font-weight:bold">${fmt(running)}</td></tr>`;
+      runningBalance = runningBalance + inMese - outMese;
+      html += `<tr><td>${d.toLocaleString('it-IT',{month:'short',year:'2-digit'})}</td><td class="money in">+${fmt(inMese)}</td><td class="money out">-${fmt(outMese)}</td><td style="font-weight:bold">${fmt(runningBalance)}</td></tr>`;
     }
     document.getElementById('forecastBody').innerHTML = html;
   }
@@ -286,19 +300,16 @@
 
   function openModal(t, b) { document.getElementById('modalTitle').innerText = t; document.getElementById('modalBody').innerHTML = b; document.getElementById('detailModal').style.display = 'flex'; }
   function closeModal() { document.getElementById('detailModal').style.display = 'none'; }
-  function showActDetail() { openModal("Hub Banca 💳", "Saldo totale aggiornato ad oggi."); }
+  function showActDetail() { openModal("Hub Banca 💳", "Saldo reale basato su tutti i movimenti registrati fino ad oggi."); }
   function showDispDetail() { 
     const d = getCalculatedData();
-    const curMonth = new Date().toISOString().slice(0,7);
-    const movsMese = state.movs.filter(m => m.date.slice(0,7) === curMonth && m.source === 'banca');
-    let h = `<b>ANALISI DISPONIBILITÀ:</b><hr>Saldo Inizio Mese: ${fmt(d.balPreMonth)}<br><br><b>Operazioni Reali:</b><br>` + 
-    (movsMese.length ? movsMese.map(m => `<div style="font-size:0.8rem">${m.cat}: <span class="money ${m.type}">${m.type==='entrata'?'+':'-'}${fmt(m.amt)}</span></div>`).join('') : "Nessuno") + `<hr>`;
-    if(d.stipDaAggiungere > 0) h += `Stipendio Atteso: <span class="money in">+${fmt(d.stipDaAggiungere)}</span><br>`;
-    h += `<br><b>Spese Fisse Residue:</b><br>` + (d.fisseList.length ? d.fisseList.map(f => `<div style="font-size:0.8rem">${f.cat}: <span class="money out">-${fmt(f.amt)}</span></div>`).join('') : "Nessuna") + `<hr><b>DISPONIBILE FINALE: ${fmt(d.avail)}</b>`;
+    let h = `<b>ANALISI DISPONIBILITÀ:</b><hr>`;
+    if(d.stipDaAggiungere > 0) h += `Stipendio previsto: <span class="money in">+${fmt(d.stipDaAggiungere)}</span><br>`;
+    h += `Spese fisse residue: <br>` + (d.fisseList.length ? d.fisseList.map(f => `<div>${f.cat}: <span class="money out">-${fmt(f.amt)}</span></div>`).join('') : "Nessuna") + `<hr><b>Previsto Fine Mese: ${fmt(d.avail)}</b>`;
     openModal("Disponibile 🏁", h); 
   }
-  function showSavDetail() { openModal("Risparmio 💎", `Fondo: ${fmt(state.sBal)}`); }
-  function showCashDetail() { openModal("Cassa Contante 💵", "Denaro fisico in portafoglio."); }
+  function showSavDetail() { openModal("Risparmio 💎", `Fondo totale: ${fmt(state.sBal)}`); }
+  function showCashDetail() { openModal("Cassa Contante 💵", "Portafoglio fisico."); }
   function saveConfig() { state.stipendioBase = Number(document.getElementById('baseSalary').value); state.alertLimit = Number(document.getElementById('alertLimit').value); saveData(); render(); }
   function delM(i) { state.movs.splice(i,1); render(); }
   function delB(i) { state.buds.splice(i,1); render(); }
@@ -315,7 +326,7 @@
   };
 
   function exportData() {
-    const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'bpm_v53.json'; a.click();
+    const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'bpm_v54.json'; a.click();
   }
   function importData(e) {
     const r = new FileReader(); r.onload = x => { state = JSON.parse(x.target.result); render(); }; r.readAsText(e.target.files[0]);
