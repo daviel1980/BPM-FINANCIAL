@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BPM FINANCIAL HUB - V56 FINAL CALIBRATION</title>
+  <title>BPM FINANCIAL HUB - V57 CASH & GRAPH FIX</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -14,23 +14,29 @@
     .v-stack { display: flex; flex-direction: column; gap: 1rem; max-width: 700px; margin: 0 auto; }
     .card { background: var(--card-bg); border-radius: 1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.05); padding: 1.25rem; }
     .title { margin: 0; font-size: 1.5rem; color: var(--accent); text-align: center; font-weight: 800; }
+    
     .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.5rem; }
     .stat { padding: 0.85rem; background: var(--accent-light); border-radius: 0.75rem; cursor: pointer; position: relative; border: 1px solid transparent; transition: 0.2s; }
     .stat-label { font-size: 0.65rem; color: var(--accent); font-weight: 700; text-transform: uppercase; }
     .stat-date { font-size: 0.6rem; color: gray; margin-bottom: 2px; }
     .stat-value { font-size: 1.15rem; font-weight: 800; }
+    
     .quick-actions { display: flex; gap: 4px; position: absolute; top: 8px; right: 8px; }
     .btn-small { background: white; border: 1px solid currentColor; font-weight: 700; padding: 2px 4px; font-size: 0.55rem; border-radius: 4px; cursor: pointer; }
+    
     #alertBanner { padding: 0.75rem; border-radius: 0.75rem; font-weight: 700; text-align: center; font-size: 0.85rem; margin-top: 0.5rem; display: none; }
     .alert-ok { background: #dcfce7; color: #166534; }
     .alert-warn { background: #fee2e2; color: #991b1b; }
+
     .section-title { margin-bottom: 0.8rem; font-size: 1rem; font-weight: 600; border-bottom: 2px solid var(--accent); padding-bottom: 0.3rem; display: inline-block; }
     input, select, button { border-radius: 0.5rem; border: 1px solid var(--border); padding: 0.6rem; font-size: 0.875rem; width: 100%; box-sizing: border-box; }
     button.primary { background: var(--accent); color: #fff; border: none; font-weight: 600; cursor: pointer; }
+    
     .table { width: 100%; border-collapse: collapse; }
     .table td { padding: 0.6rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
     .money.in { color: var(--in); font-weight: 600; }
     .money.out { color: var(--out); font-weight: 600; }
+    
     .modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
     .modal-content { background: white; padding: 1.5rem; border-radius: 1rem; width: 90%; max-width: 550px; max-height: 80vh; overflow-y: auto; }
   </style>
@@ -72,8 +78,8 @@
   </div>
 
   <div class="card">
-    <h2 class="section-title">PROIEZIONI FINE MESE</h2>
-    <table class="table"><thead style="background:#f9f9f9"><tr><th>Mese</th><th>Entrate</th><th>Uscite</th><th>Fine Mese</th></tr></thead><tbody id="forecastBody"></tbody></table>
+    <h2 class="section-title">ANALISI SALDO VS DISPONIBILITÀ</h2>
+    <canvas id="balanceChart" height="200"></canvas>
   </div>
 
   <div id="detailModal" class="modal" onclick="closeModal()">
@@ -87,11 +93,11 @@
   </div>
 
   <div class="card">
-    <h2 class="section-title">REGISTRA MOVIMENTO REALE</h2>
+    <h2 class="section-title">REGISTRA MOVIMENTO</h2>
     <form id="movForm">
       <input type="date" id="mDate" required>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:5px 0">
-        <select id="mSource"><option value="banca">💳 Banca</option><option value="contanti">💵 Contanti</option></select>
+        <select id="mSource"><option value="banca">💳 Banca</option><option value="contanti">💵 Cassa Contante</option></select>
         <select id="mType"><option value="uscita">Uscita (-)</option><option value="entrata">Entrata (+)</option></select>
       </div>
       <input type="number" id="mAmt" step="0.01" placeholder="Importo €" required style="margin-bottom:5px">
@@ -115,7 +121,7 @@
   </div>
 
   <div class="card">
-    <h2 class="section-title">CONFIGURAZIONE HUB</h2>
+    <h2 class="section-title">IMPOSTAZIONI HUB</h2>
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px">
       <div><label style="font-size:0.7rem">Stipendio (€)</label><input type="number" id="baseSalary"></div>
       <div><label style="font-size:0.7rem">Soglia Alert (€)</label><input type="number" id="alertLimit" value="400"></div>
@@ -139,14 +145,15 @@
   const fmtDate = d => d.split('-').reverse().join('/');
 
   let state = { movs: [], buds: [], sBal: 0, stipendioBase: 0, alertLimit: 400 };
+  let chart;
 
   function loadData() {
-    const saved = localStorage.getItem('bpm_v56');
+    const saved = localStorage.getItem('bpm_v57');
     if (saved) state = JSON.parse(saved);
     document.getElementById('baseSalary').value = state.stipendioBase || 0;
     document.getElementById('alertLimit').value = state.alertLimit || 400;
   }
-  function saveData() { localStorage.setItem('bpm_v56', JSON.stringify(state)); }
+  function saveData() { localStorage.setItem('bpm_v57', JSON.stringify(state)); }
 
   function manageFunds(action) {
     let amt = prompt("Importo:");
@@ -166,13 +173,12 @@
     const today = new Date().toISOString().slice(0,10);
     const curMonth = today.slice(0,7);
     
-    // Saldo REALE oggi
+    // CALCOLO SALDO CASSA CORRETTO (Somma algebrica entrate/uscite contanti)
     const bancaBal = state.movs.filter(m => m.date <= today && m.source === 'banca').reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
     const cashBal = state.movs.filter(m => m.source === 'contanti' && m.date <= today).reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
     
-    // Calcolo Disponibile (Fine mese corrente)
-    const haStipReale = state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.toLowerCase().includes('stipendio') && m.type === 'entrata');
-    const stipDaAggiungere = haStipReale ? 0 : (state.stipendioBase || 0);
+    const haStip = state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.toLowerCase().includes('stipendio') && m.type === 'entrata');
+    const stipDaAgg = haStip ? 0 : (state.stipendioBase || 0);
 
     let fisseRes = 0;
     let fisseList = [];
@@ -181,11 +187,7 @@
       if(!pagata) { fisseRes += f.amt; fisseList.push(f); }
     });
 
-    // Movimenti reali già programmati per il futuro di questo mese
-    const futInMese = state.movs.filter(m => m.date.slice(0,7) === curMonth && m.date > today && m.source === 'banca' && m.type === 'entrata').reduce((s,m)=>s+m.amt,0);
-    const futOutMese = state.movs.filter(m => m.date.slice(0,7) === curMonth && m.date > today && m.source === 'banca' && m.type === 'uscita').reduce((s,m)=>s+m.amt,0);
-
-    return { bancaBal, cashBal, avail: bancaBal + stipDaAggiungere - fisseRes + futInMese - futOutMese, fisseRes, fisseList, stipDaAggiungere };
+    return { bancaBal, cashBal, avail: bancaBal + stipDaAgg - fisseRes, fisseRes, fisseList, stipDaAgg };
   }
 
   function render() {
@@ -200,8 +202,8 @@
 
     const banner = document.getElementById('alertBanner');
     banner.style.display = 'block';
-    if(data.avail < state.alertLimit) { banner.className = 'alert-warn'; banner.textContent = `🚨 SOGLIA CRITICA: ${fmt(data.avail)}`; }
-    else { banner.className = 'alert-ok'; banner.textContent = `✅ DISPONIBILITÀ OK`; }
+    if(data.avail < state.alertLimit) { banner.className = 'alert-warn'; banner.textContent = `🚨 ATTENZIONE: Disponibilità bassa (${fmt(data.avail)})`; }
+    else { banner.className = 'alert-ok'; banner.textContent = `✅ Disponibilità OK`; }
 
     const sorted = [...state.movs].sort((a,b) => new Date(b.date) - new Date(a.date));
     document.getElementById('rows').innerHTML = sorted.map((m) => `<tr>
@@ -216,74 +218,47 @@
         <button onclick="delB(${i})" style="background:none;border:none;cursor:pointer">🗑️</button>
       </div>`).join('');
 
-    renderForecast();
+    updateChart(data.bancaBal, data.fisseRes);
     saveData();
   }
 
-  function renderForecast() {
-    const today = new Date().toISOString().slice(0,10);
-    const curMonthStr = today.slice(0,7);
-    const stipBase = state.stipendioBase || 0;
-    const fisseMensili = state.buds.reduce((s,b) => s + (b.period==='mensile'?b.amt:0), 0);
+  function updateChart(currentBanca, fisseRes) {
+    const sorted = [...state.movs].filter(m=>m.source==='banca').sort((a,b)=>new Date(a.date)-new Date(b.date));
+    const labels = sorted.map(m=>fmtDate(m.date));
+    let rb = 0;
+    const dataB = sorted.map(m => { rb += (m.type==='entrata'?m.amt:-m.amt); return rb; });
+    const dataD = dataB.map(v => v - fisseRes);
+    chart.data.labels = labels;
+    chart.data.datasets[0].data = dataB;
+    chart.data.datasets[1].data = dataD;
+    chart.update();
+  }
 
-    // Punto di partenza: Saldo Reale ad oggi
-    let running = state.movs.filter(m => m.date <= today && m.source === 'banca')
-                             .reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
-    
-    let html = '';
-    const now = new Date();
-
-    for(let i=0; i<6; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-      const mStr = d.toISOString().slice(0,7);
-      
-      let inMese = 0;
-      let outMese = 0;
-
-      // 1. Movimenti REALI futuri programmati
-      // Se è il mese corrente, prendiamo solo quelli con data > oggi.
-      // Se è un mese futuro, prendiamo tutti i reali già inseriti per quel mese.
-      state.movs.filter(m => m.date.slice(0,7) === mStr && m.source === 'banca').forEach(m => {
-          if (mStr > curMonthStr || (mStr === curMonthStr && m.date > today)) {
-              if (m.type === 'entrata') inMese += m.amt;
-              else outMese += m.amt;
-          }
-      });
-
-      // 2. Stipendio Previsto
-      const haGiaStip = state.movs.some(m => m.date.slice(0,7) === mStr && m.cat.toLowerCase().includes('stipendio') && m.type === 'entrata');
-      if (!haGiaStip) inMese += stipBase;
-
-      // 3. Spese Fisse
-      if (mStr === curMonthStr) {
-          // Per aprile: solo quelle non ancora pagate nello storico reale
-          state.buds.forEach(f => {
-              const pagata = state.movs.some(m => m.date.slice(0,7) === curMonthStr && m.cat.toLowerCase().includes(f.cat.toLowerCase()));
-              if(!pagata) outMese += f.amt;
-          });
-      } else {
-          // Per i mesi futuri: tutte le fisse ricorrenti
-          outMese += fisseMensili;
-      }
-
-      running = running + inMese - outMese;
-      html += `<tr><td>${d.toLocaleString('it-IT',{month:'short',year:'2-digit'})}</td><td class="money in">+${fmt(inMese)}</td><td class="money out">-${fmt(outMese)}</td><td style="font-weight:bold">${fmt(running)}</td></tr>`;
-    }
-    document.getElementById('forecastBody').innerHTML = html;
+  function initChart() {
+    const ctx = document.getElementById('balanceChart').getContext('2d');
+    chart = new Chart(ctx, {
+      type: 'line',
+      data: { datasets: [
+        {label:'Saldo Banca',borderColor:'#009966',pointRadius:1,fill:false},
+        {label:'Disponibile',borderColor:'#01696f',borderDash:[5,5],pointRadius:0,fill:false}
+      ]},
+      options: { responsive: true, scales: { x: { ticks: {font:{size:9}} } } }
+    });
   }
 
   function openModal(t, b) { document.getElementById('modalTitle').innerText = t; document.getElementById('modalBody').innerHTML = b; document.getElementById('detailModal').style.display = 'flex'; }
   function closeModal() { document.getElementById('detailModal').style.display = 'none'; }
-  function showActDetail() { openModal("Hub Banca 💳", "Saldo reale calcolato sui movimenti fino ad oggi."); }
+  function showActDetail() { openModal("Hub Banca 💳", "Saldo totale reale ad oggi."); }
   function showDispDetail() { 
     const d = getCalculatedData();
-    let h = `<b>PREVISIONE FINE MESE:</b><hr>`;
-    if(d.stipDaAggiungere > 0) h += `Stipendio previsto: <span class="money in">+${fmt(d.stipDaAggiungere)}</span><br>`;
-    h += `Fisse da pagare: <br>` + (d.fisseList.length ? d.fisseList.map(f => `<div>${f.cat}: <span class="money out">-${fmt(f.amt)}</span></div>`).join('') : "Nessuna") + `<hr><b>Totale: ${fmt(d.avail)}</b>`;
+    let h = `<b>SITUAZIONE FINE MESE:</b><hr>`;
+    if(d.stipDaAgg > 0) h += `Stipendio previsto: <span class="money in">+${fmt(d.stipDaAgg)}</span><br>`;
+    h += `Fisse residue: <br>` + (d.fisseList.length ? d.fisseList.map(f => `<div>${f.cat}: <span class="money out">-${fmt(f.amt)}</span></div>`).join('') : "Nessuna") + `<hr><b>Previsto: ${fmt(d.avail)}</b>`;
     openModal("Disponibile 🏁", h); 
   }
-  function showSavDetail() { openModal("Risparmio 💎", `Fondo accumulato: ${fmt(state.sBal)}`); }
-  function showCashDetail() { openModal("Cassa Contante 💵", "Denaro fisico registrato."); }
+  function showSavDetail() { openModal("Risparmio 💎", `Saldo accantonato: ${fmt(state.sBal)}`); }
+  function showCashDetail() { openModal("Cassa Contante 💵", `Totale fisico in portafoglio calcolato da entrate/uscite contanti.`); }
+  
   function saveConfig() { state.stipendioBase = Number(document.getElementById('baseSalary').value); state.alertLimit = Number(document.getElementById('alertLimit').value); saveData(); render(); }
   function delM(i) { state.movs.splice(i,1); render(); }
   function delB(i) { state.buds.splice(i,1); render(); }
@@ -300,13 +275,13 @@
   };
 
   function exportData() {
-    const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'bpm_v56.json'; a.click();
+    const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'bpm_v57.json'; a.click();
   }
   function importData(e) {
     const r = new FileReader(); r.onload = x => { state = JSON.parse(x.target.result); render(); }; r.readAsText(e.target.files[0]);
   }
 
-  loadData(); render();
+  loadData(); initChart(); render();
 </script>
 </body>
 </html>
