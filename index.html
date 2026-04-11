@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BPM FINANCIAL HUB - V26 SINGLE DATE FIX</title>
+  <title>BPM FINANCIAL HUB - V27 INTERACTIVE FIX</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -15,9 +15,12 @@
     .card { background: var(--card-bg); border-radius: 1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.05); padding: 1.25rem; }
     .title { margin: 0; font-size: 1.5rem; color: var(--accent); text-align: center; font-weight: 800; }
     .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.5rem; }
-    .stat { padding: 0.75rem; background: var(--accent-light); border-radius: 0.75rem; cursor: pointer; border: 1px solid transparent; }
-    .stat-label { font-size: 0.8rem; color: var(--accent); font-weight: 500; }
-    .stat-value { font-size: 1.1rem; font-weight: 700; }
+    .stat { padding: 0.75rem; background: var(--accent-light); border-radius: 0.75rem; cursor: pointer; border: 1px solid transparent; transition: 0.2s; }
+    .stat:active { transform: scale(0.95); background: #d0e8e8; }
+    .stat-label { font-size: 0.8rem; color: var(--accent); font-weight: 500; pointer-events: none; }
+    .stat-value { font-size: 1.1rem; font-weight: 700; pointer-events: none; }
+    .modal { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
+    .modal-content { background: white; padding: 1.5rem; border-radius: 1rem; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
     .section-title { margin-bottom: 0.8rem; font-size: 1rem; font-weight: 600; border-bottom: 2px solid var(--accent); padding-bottom: 0.3rem; display: inline-block; }
     input, select, button { border-radius: 0.5rem; border: 1px solid var(--border); padding: 0.6rem; font-size: 0.875rem; width: 100%; box-sizing: border-box; }
     button.primary { background: var(--accent); color: #fff; border: none; font-weight: 600; cursor: pointer; }
@@ -26,8 +29,6 @@
     .money.in { color: var(--in); font-weight: 600; }
     .money.out { color: var(--out); font-weight: 600; }
     .badge { font-size: 0.6rem; padding: 2px 5px; border-radius: 4px; background: #01696f; color: white; text-transform: uppercase; }
-    .modal { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
-    .modal-content { background: white; padding: 1.5rem; border-radius: 1rem; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
   </style>
 </head>
 <body>
@@ -40,16 +41,13 @@
       <div class="stat" onclick="showActDetail()"><div class="stat-label">Saldo Attuale</div><div id="actBal" class="stat-value">0 €</div></div>
       <div class="stat" onclick="showDispDetail()"><div class="stat-label">Disponibile (Fine Mese)</div><div id="curBal" class="stat-value">0 €</div></div>
       <div class="stat" onclick="showSavDetail()"><div class="stat-label">Carta Risparmio</div><div id="savBal" class="stat-value">0 €</div></div>
-      <div class="stat" onclick="showFisseDetail()"><div class="stat-label">Fisse/Scadenze Residue</div><div id="budTot" class="stat-value">0 €</div></div>
+      <div class="stat" onclick="showFisseDetail()"><div class="stat-label">Fisse Residue</div><div id="budTot" class="stat-value">0 €</div></div>
     </div>
   </div>
 
   <div class="card">
     <h2 class="section-title">PROIEZIONE PROSSIMI 6 MESI</h2>
-    <table class="table">
-      <thead style="background:#f1f5f9"><tr><th>Mese</th><th>Entrate</th><th>Uscite Fisse</th><th>Saldo Finale</th></tr></thead>
-      <tbody id="forecastBody"></tbody>
-    </table>
+    <table class="table"><thead style="background:#f1f5f9"><tr><th>Mese</th><th>Entrate</th><th>Fisse</th><th>Saldo Finale</th></tr></thead><tbody id="forecastBody"></tbody></table>
   </div>
 
   <div id="detailModal" class="modal" onclick="this.style.display='none'">
@@ -76,22 +74,22 @@
   </div>
 
   <div class="card">
-    <h2 class="section-title">SCADENZE E FISSE PROGRAMMATE</h2>
+    <h2 class="section-title">SCADENZE E FISSE</h2>
     <form id="budForm">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:5px">
         <input type="date" id="bDate" required>
         <select id="bPeriod">
-          <option value="singola">Singola (Una volta)</option>
-          <option value="mensile">Mensile (Ricorrente)</option>
+          <option value="mensile">Mensile</option>
+          <option value="singola">Singola (una volta)</option>
           <option value="settimanale">Settimanale</option>
           <option value="giornaliero">Giornaliero</option>
         </select>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
         <input type="number" id="bAmt" step="0.01" placeholder="Importo €" required>
-        <input type="text" id="bCat" placeholder="Nome Scadenza" required>
+        <input type="text" id="bCat" placeholder="Nome Spesa" required>
       </div>
-      <button type="submit" class="primary">Aggiungi a Programmate</button>
+      <button type="submit" class="primary">Salva Programmazione</button>
     </form>
     <div id="budList" style="margin-top:10px"></div>
   </div>
@@ -114,12 +112,12 @@
   let state = { movs: [], buds: [], sBal: 0 };
 
   function loadData() {
-    const saved = localStorage.getItem('bpm_v26');
+    const saved = localStorage.getItem('bpm_v27');
     if (saved) state = JSON.parse(saved);
   }
 
   function saveData() {
-    localStorage.setItem('bpm_v26', JSON.stringify(state));
+    localStorage.setItem('bpm_v27', JSON.stringify(state));
   }
 
   function getCalculatedData() {
@@ -134,26 +132,19 @@
     const fisseDettaglio = [];
 
     state.buds.forEach(f => {
-      const isThisMonth = f.date.slice(0,7) === currentMonth;
-      
-      // Se è una spesa singola, la contiamo solo se la data è nel futuro o oggi, 
-      // e solo se non l'abbiamo già registrata nello storico
+      const giaPagataMese = state.movs.some(m => 
+        m.date.slice(0,7) === currentMonth && 
+        m.cat.toLowerCase().includes(f.cat.toLowerCase())
+      );
+
       if (f.period === 'singola') {
-        const giaPagata = state.movs.some(m => m.date === f.date && m.cat.toLowerCase().includes(f.cat.toLowerCase()));
-        if (!giaPagata && f.date >= todayStr && isThisMonth) {
-            totalFisseResidue += f.amt;
-            fisseDettaglio.push(f);
-        }
-      } else if (f.period === 'mensile' || f.period === 'settimanale') {
-        const giaPagataMese = state.movs.some(m => m.date.slice(0,7) === currentMonth && m.cat.toLowerCase().includes(f.cat.toLowerCase()));
-        if (!giaPagataMese) {
-            totalFisseResidue += f.amt;
-            fisseDettaglio.push(f);
-        }
-      } else if (f.period === 'giornaliero') {
-          // Logica giornaliera semplificata per il mese corrente (stima approssimativa)
+        if (f.date >= todayStr && f.date.slice(0,7) === currentMonth && !giaPagataMese) {
           totalFisseResidue += f.amt;
           fisseDettaglio.push(f);
+        }
+      } else if (!giaPagataMese) {
+        totalFisseResidue += f.amt;
+        fisseDettaglio.push(f);
       }
     });
 
@@ -170,12 +161,12 @@
     const sortedMovs = [...state.movs].sort((a, b) => new Date(b.date) - new Date(a.date));
     document.getElementById('rows').innerHTML = sortedMovs.map(m => {
       const idx = state.movs.indexOf(m);
-      return `<tr><td><small>${fmtDate(m.date)}</small><br><b>${m.cat}</b></td><td class="money ${m.type}" style="text-align:right">${m.type==='entrata'?'+':'-'} ${fmt(m.amt)}</td><td style="text-align:right"><button onclick="delM(${idx})" style="background:none;border:none;cursor:pointer">🗑️</button></td></tr>`;
+      return `<tr><td><small>${fmtDate(m.date)}</small><br><b>${m.cat}</b></td><td class="money ${m.type}" style="text-align:right">${m.type==='entrata'?'+':'-'} ${fmt(m.amt)}</td><td style="text-align:right"><button onclick="delM(${idx})" style="background:none;border:none">🗑️</button></td></tr>`;
     }).join('');
 
     document.getElementById('budList').innerHTML = state.buds.map((b,i) => `
       <div style="display:flex;justify-content:space-between;padding:6px;background:#f9fafb;margin-bottom:4px;border-radius:6px;border-left:3px solid ${b.period==='singola'?'#cc0052':'#01696f'};font-size:0.85rem">
-        <span><span class="badge" style="background:${b.period==='singola'?'#cc0052':'' }">${b.period}</span> ${fmtDate(b.date)} - ${b.cat}: <b>${fmt(b.amt)}</b></span>
+        <span><span class="badge" style="background:${b.period==='singola'?'#cc0052':'' }">${b.period}</span> ${b.cat}: <b>${fmt(b.amt)}</b></span>
         <button onclick="delB(${i})" style="background:none;border:none">🗑️</button>
       </div>`).join('');
 
@@ -186,9 +177,7 @@
   function renderForecast(currentActual) {
     let running = currentActual;
     const stipendio = state.movs.filter(m => m.type === 'entrata' && m.cat.toLowerCase().includes('stipendio')).reduce((s,m)=>s+m.amt, 0);
-    
-    // Spese ricorrenti mensili (escludiamo le 'singole' dal calcolo fisso)
-    const ricorrentiMensili = state.buds.reduce((s, b) => {
+    const ricorrenti = state.buds.reduce((s, b) => {
       if(b.period === 'mensile') return s + b.amt;
       if(b.period === 'settimanale') return s + (b.amt * 4);
       if(b.period === 'giornaliero') return s + (b.amt * 30);
@@ -200,22 +189,27 @@
     for(let i=0; i<6; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
       const mStr = d.toISOString().slice(0,7);
-      const label = d.toLocaleString('it-IT', { month: 'long', year: 'numeric' });
-      
-      // Aggiungiamo le spese 'singole' solo nel mese specifico della loro data
-      const singoleDelMese = state.buds
-        .filter(b => b.period === 'singola' && b.date.slice(0,7) === mStr)
-        .reduce((s, b) => s + b.amt, 0);
-
-      const totalOutMese = ricorrentiMensili + singoleDelMese;
-      running = running + stipendio - totalOutMese;
-      
-      html += `<tr><td>${label}</td><td class="money in">+ ${fmt(stipendio)}</td><td class="money out">- ${fmt(totalOutMese)}</td><td style="font-weight:bold">${fmt(running)}</td></tr>`;
+      const singole = state.buds.filter(b => b.period === 'singola' && b.date.slice(0,7) === mStr).reduce((s,b)=>s+b.amt,0);
+      running = running + stipendio - ricorrenti - singole;
+      html += `<tr><td>${d.toLocaleString('it-IT',{month:'long',year:'numeric'})}</td><td class="money in">+ ${fmt(stipendio)}</td><td class="money out">- ${fmt(ricorrenti+singole)}</td><td style="font-weight:bold">${fmt(running)}</td></tr>`;
     }
     document.getElementById('forecastBody').innerHTML = html;
   }
 
-  // Eventi
+  function openModal(t, b) { document.getElementById('modalTitle').innerText = t; document.getElementById('modalBody').innerHTML = b; document.getElementById('detailModal').style.display = 'flex'; }
+  function showActDetail() { openModal("Saldo Attuale", "Basato sui movimenti registrati fino a oggi."); }
+  function showDispDetail() { 
+    const data = getCalculatedData();
+    const h = data.fisseDettaglio.length ? '<table class="table">' + data.fisseDettaglio.map(f => `<tr><td>${f.cat} <small>(${f.period})</small></td><td style="text-align:right" class="money out">-${fmt(f.amt)}</td></tr>`).join('') + '</table>' : 'Nessuna spesa pendente.';
+    openModal("Riepilogo Disponibilità", `Saldo attuale meno le seguenti voci:<br><br>${h}`);
+  }
+  function showSavDetail() { openModal("Risparmio", `Accumulo totale: ${fmt(state.sBal)}`); }
+  function showFisseDetail() { 
+    const data = getCalculatedData();
+    const h = data.fisseDettaglio.length ? '<table class="table">' + data.fisseDettaglio.map(f => `<tr><td>${f.cat}</td><td style="text-align:right">-${fmt(f.amt)}</td></tr>`).join('') + '</table>' : 'Tutte le fisse del mese risultano pagate.';
+    openModal("Fisse Residue del Mese", h); 
+  }
+
   document.getElementById('movForm').onsubmit = e => {
     e.preventDefault();
     state.movs.push({ date: document.getElementById('mDate').value, type: document.getElementById('mType').value, amt: Number(document.getElementById('mAmt').value), cat: document.getElementById('mCat').value });
@@ -229,21 +223,10 @@
 
   function delM(i) { state.movs.splice(i,1); render(); }
   function delB(i) { state.buds.splice(i,1); render(); }
-  function openModal(t, b) { document.getElementById('modalTitle').innerText = t; document.getElementById('modalBody').innerHTML = b; document.getElementById('detailModal').style.display = 'flex'; }
-  function showActDetail() { openModal("Saldo Attuale", "Saldo reale basato sui movimenti registrati fino ad oggi."); }
-  function showDispDetail() { openModal("Saldo Disponibile", "Il saldo che avrai a fine mese tolte tutte le scadenze programmate (ricorrenti e singole) non ancora pagate."); }
-  function showSavDetail() { openModal("Risparmio", "Contatore della Carta Risparmio."); }
-  function showFisseDetail() { 
-    const data = getCalculatedData();
-    const h = data.fisseDettaglio.length ? '<table class="table">' + data.fisseDettaglio.map(f => `<tr><td>${f.cat} (${f.period})</td><td style="text-align:right" class="money out">-${fmt(f.amt)}</td></tr>`).join('') + '</table>' : 'Nessuna scadenza residua.';
-    openModal("Scadenze Residue", h); 
-  }
-  
   function exportData() {
     const link = document.createElement('a');
     link.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state));
-    link.download = `bpm_backup.json`;
-    link.click();
+    link.download = `bpm_backup.json`; link.click();
   }
   function importData(e) {
     const r = new FileReader();
