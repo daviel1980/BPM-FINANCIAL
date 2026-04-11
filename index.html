@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BPM FINANCIAL HUB - V41 FULL PROJECTION</title>
+  <title>BPM FINANCIAL HUB - V42 RESTORED BUDGET</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -22,7 +22,6 @@
     #alertBanner { padding: 0.75rem; border-radius: 0.75rem; font-weight: 700; text-align: center; font-size: 0.85rem; display: none; margin-top: 0.5rem; }
     .alert-ok { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
     .alert-warn { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; animation: pulse 2s infinite; }
-    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.8; } 100% { opacity: 1; } }
     .section-title { margin-bottom: 0.8rem; font-size: 1rem; font-weight: 600; border-bottom: 2px solid var(--accent); padding-bottom: 0.3rem; display: inline-block; }
     input, select, button { border-radius: 0.5rem; border: 1px solid var(--border); padding: 0.6rem; font-size: 0.875rem; width: 100%; box-sizing: border-box; }
     button.primary { background: var(--accent); color: #fff; border: none; font-weight: 600; cursor: pointer; }
@@ -33,8 +32,8 @@
     .money.out { color: var(--out); font-weight: 600; }
     .modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
     .modal-content { background: white; padding: 1.5rem; border-radius: 1rem; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
-    .edit-input { width: 80px; padding: 4px; border: 1px solid var(--save); border-radius: 4px; text-align: right; font-weight: bold; }
     .btn-icon { background: none; border: none; font-size: 1.1rem; cursor: pointer; width: auto; padding: 0; margin-left: 5px; }
+    .badge { font-size: 0.6rem; padding: 2px 5px; border-radius: 4px; background: #01696f; color: white; text-transform: uppercase; }
   </style>
 </head>
 <body>
@@ -57,11 +56,6 @@
   </div>
 
   <div class="card">
-    <h2 class="section-title">ANDAMENTO PATRIMONIALE</h2>
-    <canvas id="balanceChart" height="200"></canvas>
-  </div>
-
-  <div class="card">
     <h2 class="section-title">CONFIGURAZIONE HUB</h2>
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px">
       <div><label style="font-size:0.7rem">Stipendio Previsto (€)</label><input type="number" id="baseSalary"></div>
@@ -71,9 +65,13 @@
   </div>
 
   <div class="card">
-    <h2 class="section-title">PROIEZIONE 6 MESI (FINE MESE)</h2>
+    <h2 class="section-title">ANDAMENTO PATRIMONIALE</h2>
+    <canvas id="balanceChart" height="200"></canvas>
+  </div>
+
+  <div class="card">
+    <h2 class="section-title">PROIEZIONE 6 MESI</h2>
     <table class="table"><thead style="background:#f9f9f9"><tr><th>Mese</th><th>Entrate*</th><th>Uscite*</th><th>Saldo Finale</th></tr></thead><tbody id="forecastBody"></tbody></table>
-    <small style="color:gray; font-size:0.7rem">*Include Stipendio e movimenti reali programmati.</small>
   </div>
 
   <div id="detailModal" class="modal" onclick="closeModal()">
@@ -87,7 +85,7 @@
   </div>
 
   <div class="card">
-    <h2 class="section-title">REGISTRA MOVIMENTO</h2>
+    <h2 class="section-title">REGISTRA MOVIMENTO REALE</h2>
     <form id="movForm">
       <input type="date" id="mDate" required>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:5px 0">
@@ -100,6 +98,26 @@
       </div>
       <button type="submit" class="primary" style="margin-top:5px">Registra Movimento</button>
     </form>
+  </div>
+
+  <div class="card">
+    <h2 class="section-title">PROGRAMMAZIONE SPESE FISSE</h2>
+    <form id="budForm">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:5px">
+        <input type="date" id="bDate" required>
+        <select id="bPeriod">
+            <option value="mensile">Ogni Mese (Ricorrente)</option>
+            <option value="singola">Singola (Una Tantum)</option>
+            <option value="settimanale">Settimanale</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
+        <input type="number" id="bAmt" step="0.01" placeholder="Importo €" required>
+        <input type="text" id="bCat" placeholder="Nome Scadenza (es. Affitto)" required>
+      </div>
+      <button type="submit" class="primary" style="margin-top:5px">Aggiungi Spesa Fissa</button>
+    </form>
+    <div id="budList" style="margin-top:10px"></div>
   </div>
 
   <div class="card">
@@ -122,19 +140,18 @@
   let editingId = null;
 
   function loadData() {
-    const saved = localStorage.getItem('bpm_v41');
+    const saved = localStorage.getItem('bpm_v42');
     if (saved) state = JSON.parse(saved);
     document.getElementById('baseSalary').value = state.stipendioBase || 0;
     document.getElementById('alertLimit').value = state.alertLimit || 400;
   }
 
-  function saveData() { localStorage.setItem('bpm_v41', JSON.stringify(state)); }
+  function saveData() { localStorage.setItem('bpm_v42', JSON.stringify(state)); }
 
   function saveConfig() {
     state.stipendioBase = Number(document.getElementById('baseSalary').value);
     state.alertLimit = Number(document.getElementById('alertLimit').value);
     saveData(); render();
-    alert("Hub aggiornato!");
   }
 
   function quickSave() {
@@ -142,7 +159,7 @@
       if(amt && !isNaN(amt)) {
           const val = Number(amt);
           state.sBal += val;
-          state.movs.push({ date: new Date().toISOString().slice(0,10), source: 'banca', type: 'uscita', amt: val, cat: "💎 Risparmio" });
+          state.movs.push({ date: new Date().toISOString().slice(0,10), source: 'banca', type: 'uscita', amt: val, cat: "💎 Accantonamento Risparmio" });
           render();
       }
   }
@@ -187,7 +204,7 @@
       const idx = state.movs.indexOf(m);
       const isEditing = editingId === idx;
       return `<tr>
-        <td><small>${fmtDate(m.date)}</small> ${m.source==='contanti'?'<span style="font-size:0.6rem;background:var(--cash);color:white;padding:2px 4px;border-radius:4px">CASH</span>':''}<br><b>${m.cat}</b></td>
+        <td><small>${fmtDate(m.date)}</small> ${m.source==='contanti'?'<span class="badge" style="background:var(--cash)">CASH</span>':''}<br><b>${m.cat}</b></td>
         <td style="text-align:right" class="money ${m.type}">
           ${isEditing ? `<input type="number" id="edit-${idx}" class="edit-input" value="${m.amt}">` : (m.type==='entrata'?'+':'-') + fmt(m.amt)}
         </td>
@@ -197,6 +214,13 @@
         </td>
       </tr>`;
     }).join('');
+
+    // Rendering lista Spese Fisse
+    document.getElementById('budList').innerHTML = state.buds.map((b,i) => `
+      <div style="display:flex;justify-content:space-between;padding:8px;background:#f9f9f9;margin-bottom:5px;border-radius:8px;border-left:4px solid var(--accent)">
+        <span><small>${b.period}</small> ${b.cat}: <b>${fmt(b.amt)}</b></span>
+        <button onclick="delB(${i})" style="background:none;border:none;cursor:pointer">🗑️</button>
+      </div>`).join('');
 
     renderForecast(data.bancaBal);
     updateChart(today, data.fisseRes);
@@ -214,19 +238,15 @@
     for(let i=0; i<6; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
       const mStr = d.toISOString().slice(0,7);
+      const movsIn = state.movs.filter(m => m.date.slice(0,7) === mStr && m.source === 'banca' && m.type === 'entrata').reduce((s,m)=>s+m.amt, 0);
+      const movsOut = state.movs.filter(m => m.date.slice(0,7) === mStr && m.source === 'banca' && m.type === 'uscita').reduce((s,m)=>s+m.amt, 0);
       
-      // MOVIMENTI REALI GIÀ INSERITI PER QUESTO MESE
-      const movsDelMeseIn = state.movs.filter(m => m.date.slice(0,7) === mStr && m.source === 'banca' && m.type === 'entrata').reduce((s,m)=>s+m.amt, 0);
-      const movsDelMeseOut = state.movs.filter(m => m.date.slice(0,7) === mStr && m.source === 'banca' && m.type === 'uscita').reduce((s,m)=>s+m.amt, 0);
-
-      // STIPENDIO: Se è il mese corrente, calcoliamo solo se non c'è già nello storico reale. Se è futuro, aggiungiamo lo stipendio base.
-      let inMese = movsDelMeseIn;
+      let inMese = movsIn;
       if (mStr > curMonthStr) inMese += stipBase; 
       else if (mStr === curMonthStr && !state.movs.some(m => m.date.slice(0,7) === mStr && m.cat.toLowerCase().includes('stipendio'))) inMese += stipBase;
 
-      const outMese = fisseMensili + movsDelMeseOut;
+      const outMese = fisseMensili + movsOut;
       running = running + inMese - outMese;
-      
       html += `<tr><td>${d.toLocaleString('it-IT',{month:'short',year:'2-digit'})}</td><td class="money in">+${fmt(inMese)}</td><td class="money out">-${fmt(outMese)}</td><td style="font-weight:bold">${fmt(running)}</td></tr>`;
     }
     document.getElementById('forecastBody').innerHTML = html;
@@ -270,6 +290,7 @@
   function toggleEdit(i) { editingId = i; render(); }
   function saveEdit(i) { state.movs[i].amt = Number(document.getElementById(`edit-${i}`).value); editingId = null; render(); }
   function delM(i) { if(confirm("Eliminare?")) { state.movs.splice(i,1); render(); } }
+  function delB(i) { if(confirm("Eliminare questa spesa fissa?")) { state.buds.splice(i,1); render(); } }
 
   document.getElementById('movForm').onsubmit = e => {
     e.preventDefault();
@@ -277,13 +298,19 @@
     render(); e.target.reset(); setDefaultDates();
   };
 
+  document.getElementById('budForm').onsubmit = e => {
+    e.preventDefault();
+    state.buds.push({ date: document.getElementById('bDate').value, amt: Number(document.getElementById('bAmt').value), cat: document.getElementById('bCat').value, period: document.getElementById('bPeriod').value });
+    render(); e.target.reset(); setDefaultDates();
+  };
+
   function exportData() {
-    const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'bpm_v41.json'; a.click();
+    const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'bpm_v42.json'; a.click();
   }
   function importData(e) {
     const r = new FileReader(); r.onload = x => { state = JSON.parse(x.target.result); render(); }; r.readAsText(e.target.files[0]);
   }
-  function setDefaultDates() { const n = new Date().toISOString().slice(0,10); document.getElementById('mDate').value = n; }
+  function setDefaultDates() { const n = new Date().toISOString().slice(0,10); document.getElementById('mDate').value = document.getElementById('bDate').value = n; }
 
   loadData(); setDefaultDates(); initChart(); render();
 </script>
