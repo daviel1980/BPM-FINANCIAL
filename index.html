@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BPM FINANCIAL HUB - V62 TOTAL FLOW</title>
+  <title>BPM FINANCIAL HUB - V63 TOTAL COHERENCE</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -17,6 +17,7 @@
     
     .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.5rem; }
     .stat { padding: 0.85rem; background: var(--accent-light); border-radius: 0.75rem; cursor: pointer; position: relative; border: 1px solid transparent; transition: 0.2s; }
+    .stat:hover { border-color: var(--accent); }
     .stat-label { font-size: 0.65rem; color: var(--accent); font-weight: 700; text-transform: uppercase; }
     .stat-date { font-size: 0.6rem; color: gray; margin-bottom: 2px; }
     .stat-value { font-size: 1.15rem; font-weight: 800; }
@@ -81,7 +82,7 @@
   </div>
 
   <div class="card">
-    <h2 class="section-title">ANALISI SALDI BANCA</h2>
+    <h2 class="section-title">EVOLUZIONE PATRIMONIALE</h2>
     <canvas id="balanceChart" height="180"></canvas>
   </div>
 
@@ -100,12 +101,12 @@
     <form id="movForm">
       <input type="date" id="mDate" required>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:5px 0">
-        <select id="mSource"><option value="banca">💳 Banca</option><option value="contanti">💵 Cassa Contante</option></select>
+        <select id="mSourceSelect"><option value="banca">💳 Banca</option><option value="contanti">💵 Cassa Contante</option></select>
         <select id="mType"><option value="uscita">Uscita (-)</option><option value="entrata">Entrata (+)</option></select>
       </div>
       <input type="number" id="mAmt" step="0.01" placeholder="Importo €" required style="margin-bottom:5px">
       <input type="text" id="mCat" placeholder="Descrizione" required style="margin-bottom:5px">
-      <button type="submit" class="primary">Registra</button>
+      <button type="submit" class="primary">Registra Operazione</button>
     </form>
   </div>
 
@@ -129,7 +130,7 @@
       <div><label style="font-size:0.7rem">Stipendio (€)</label><input type="number" id="baseSalary"></div>
       <div><label style="font-size:0.7rem">Soglia Alert (€)</label><input type="number" id="alertLimit" value="400"></div>
     </div>
-    <button onclick="saveConfig()" class="primary" style="margin-top:10px">Aggiorna</button>
+    <button onclick="saveConfig()" class="primary" style="margin-top:10px">Aggiorna Parametri</button>
   </div>
 
   <div class="card">
@@ -152,12 +153,12 @@
   let chart;
 
   function loadData() {
-    const saved = localStorage.getItem('bpm_v62');
+    const saved = localStorage.getItem('bpm_v63');
     if (saved) state = JSON.parse(saved);
     document.getElementById('baseSalary').value = state.stipendioBase || 0;
     document.getElementById('alertLimit').value = state.alertLimit || 400;
   }
-  function saveData() { localStorage.setItem('bpm_v62', JSON.stringify(state)); }
+  function saveData() { localStorage.setItem('bpm_v63', JSON.stringify(state)); }
 
   function manageFunds(action) {
     let amt = prompt("Importo:");
@@ -166,13 +167,11 @@
     const date = new Date().toISOString().slice(0,10);
     if(action === 'save_in') { 
         state.sBal += val; 
-        state.movs.push({ date, source:'banca', type:'uscita', amt:val, cat:"💎 Trasf. Risparmio" }); 
-    }
-    else if(action === 'save_out') { 
+        state.movs.push({ date, source:'banca', type:'uscita', amt:val, cat:"💎 Trasferimento Risparmio" }); 
+    } else if(action === 'save_out') { 
         state.sBal -= val; 
         state.movs.push({ date, source:'banca', type:'entrata', amt:val, cat:"🔙 Revoca Risparmio" }); 
-    }
-    else if(action === 'cash_in') { 
+    } else if(action === 'cash_in') { 
         state.movs.push({ date, source:'banca', type:'uscita', amt:val, cat:"🏧 Prelievo Contante" });
         state.movs.push({ date, source:'contanti', type:'entrata', amt:val, cat:"💵 Carico Cassa" }); 
     }
@@ -183,13 +182,9 @@
     const today = new Date().toISOString().slice(0,10);
     const curMonth = today.slice(0,7);
     
-    // BANCA: Tutto ciò che è datato <= oggi ed è sorgente 'banca'
     const bancaBal = state.movs.filter(m => m.date <= today && m.source === 'banca').reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
-    
-    // CASSA: Tutto ciò che è datato <= oggi ed è sorgente 'contanti'
     const cashBal = state.movs.filter(m => m.source === 'contanti' && m.date <= today).reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
     
-    // LOGICA DISPONIBILE (Riduce anche per trasferimenti)
     const haStip = state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.toLowerCase().includes('stipendio') && m.type === 'entrata');
     const stipAtteso = haStip ? 0 : (state.stipendioBase || 0);
 
@@ -204,14 +199,9 @@
     });
 
     return { 
-        bancaBal, 
-        cashBal, 
+        bancaBal, cashBal, 
         avail: bancaBal + stipAtteso + entrateFutureMese - usciteFutureMese - fisseRes, 
-        fisseRes, 
-        fisseList, 
-        stipAtteso,
-        entrateFutureMese,
-        usciteFutureMese
+        fisseRes, fisseList, stipAtteso, entrateFutureMese, usciteFutureMese
     };
   }
 
@@ -224,7 +214,8 @@
 
   function render() {
     const data = getCalculatedData();
-    const dateStr = new Date().toLocaleDateString('it-IT', { day:'2-digit', month:'short' });
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('it-IT', { day:'2-digit', month:'short' });
     document.querySelectorAll('.current-date').forEach(el => el.textContent = dateStr);
     
     document.getElementById('actBal').textContent = fmt(data.bancaBal);
@@ -259,19 +250,28 @@
         <button onclick="delB(${i})" style="background:none;border:none;cursor:pointer">🗑️</button>
       </div>`).join('');
 
-    updateChart(data.bancaBal, data.fisseRes);
+    updateChart(data);
     saveData();
   }
 
-  function updateChart(currentBanca, fisseRes) {
-    const sorted = [...state.movs].filter(m=>m.source==='banca').sort((a,b)=>new Date(a.date)-new Date(b.date));
-    const labels = sorted.map(m=>fmtDate(m.date));
-    let rb = 0;
-    const dataB = sorted.map(m => { rb += (m.type==='entrata'?m.amt:-m.amt); return rb; });
-    const dataD = dataB.map(v => v - fisseRes);
+  function updateChart(data) {
+    const today = new Date().toISOString().slice(0,10);
+    const bancaMovs = [...state.movs].filter(m=>m.source==='banca').sort((a,b)=>new Date(a.date)-new Date(b.date));
+    
+    let currentBankSum = 0;
+    const labels = [];
+    const pointsBanca = [];
+    
+    bancaMovs.forEach(m => {
+      currentBankSum += (m.type==='entrata' ? m.amt : -m.amt);
+      labels.push(fmtDate(m.date));
+      pointsBanca.push(currentBankSum);
+    });
+
     chart.data.labels = labels;
-    chart.data.datasets[0].data = dataB;
-    chart.data.datasets[1].data = dataD;
+    chart.data.datasets[0].data = pointsBanca;
+    // La linea disponibile ora è una soglia orizzontale che indica il floor previsto
+    chart.data.datasets[1].data = new Array(labels.length).fill(data.avail);
     chart.update();
   }
 
@@ -280,8 +280,8 @@
     chart = new Chart(ctx, {
       type: 'line',
       data: { datasets: [
-        {label:'Saldo Banca',borderColor:'#009966',pointRadius:1,fill:false},
-        {label:'Disponibile',borderColor:'#01696f',borderDash:[5,5],pointRadius:0,fill:false}
+        {label:'Saldo Banca',borderColor:'#009966',pointRadius:2,fill:false, tension: 0.1},
+        {label:'Soglia Disponibile',borderColor:'#01696f',borderDash:[5,5],pointRadius:0,fill:false}
       ]},
       options: { responsive: true, scales: { x: { ticks: {font:{size:9}} } } }
     });
@@ -298,10 +298,9 @@
   
   function showDispDetail() { 
     const d = getCalculatedData();
-    let h = `<b>ANALISI DISPONIBILE FINE MESE:</b><hr>`;
-    if(d.stipAtteso > 0) h += `<div style="font-size:0.8rem">Stipendio Atteso: <span class="money in">+${fmt(d.stipAtteso)}</span></div>`;
-    if(d.entrateFutureMese > 0) h += `<div style="font-size:0.8rem">Entrate Reali Future: <span class="money in">+${fmt(d.entrateFutureMese)}</span></div>`;
-    if(d.usciteFutureMese > 0) h += `<div style="font-size:0.8rem">Uscite/Trasf. Già Inseriti: <span class="money out">-${fmt(d.usciteFutureMese)}</span></div>`;
+    let h = `<b>SITUAZIONE FINE MESE:</b><hr>`;
+    if(d.stipAtteso > 0) h += `<div style="font-size:0.8rem">${fmtDate(new Date().toISOString().slice(0,10))} - Stipendio Atteso: <span class="money in">+${fmt(d.stipAtteso)}</span></div>`;
+    if(d.entrateFutureMese > 0) h += `<div style="font-size:0.8rem">Extra Entrate Programmate: <span class="money in">+${fmt(d.entrateFutureMese)}</span></div>`;
     h += `<br><b>Spese Fisse Residue:</b><br>` + (d.fisseList.map(f => `<div style="font-size:0.8rem">${f.cat}: <span class="money out">-${fmt(f.amt)}</span></div>`).join('') || "Nessuna") + `<hr><b>DISPONIBILITÀ REALE: ${fmt(d.avail)}</b>`;
     openModal("Dettaglio Disponibile 🏁", h); 
   }
@@ -314,7 +313,7 @@
   
   function showCashDetail() { 
     const list = state.movs.filter(m => m.source === 'contanti').sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,10);
-    let h = list.map(m => `<div style="font-size:0.8rem; border-bottom:1px solid #eee; padding:5px 0">${fmtDate(m.date)} - ${m.cat}: <span class="money ${m.type}">${m.type==='entrata'?'+':'-'}${fmt(m.amt)}</span></div>`).join('') || "Nessuna operazione.";
+    let h = list.map(m => `<div style="font-size:0.8rem; border-bottom:1px solid #eee; padding:5px 0">${fmtDate(m.date)} - ${m.cat}: <span class="money ${m.type}">${m.type==='entrata'?'+':'-'}${fmt(m.amt)}</span></div>`).join('') || "Cassa vuota.";
     openModal("Dettaglio Cassa 💵", h); 
   }
   
@@ -324,7 +323,13 @@
 
   document.getElementById('movForm').onsubmit = e => {
     e.preventDefault();
-    state.movs.push({ date: document.getElementById('mDate').value, source: document.getElementById('mSource').value, type: document.getElementById('mType').value, amt: Number(document.getElementById('mAmt').value), cat: document.getElementById('mCat').value });
+    state.movs.push({ 
+        date: document.getElementById('mDate').value, 
+        source: document.getElementById('mSourceSelect').value, 
+        type: document.getElementById('mType').value, 
+        amt: Number(document.getElementById('mAmt').value), 
+        cat: document.getElementById('mCat').value 
+    });
     render(); e.target.reset();
   };
   document.getElementById('budForm').onsubmit = e => {
@@ -334,7 +339,7 @@
   };
 
   function exportData() {
-    const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'bpm_v62.json'; a.click();
+    const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'bpm_v63.json'; a.click();
   }
   function importData(e) {
     const r = new FileReader(); r.onload = x => { state = JSON.parse(x.target.result); render(); }; r.readAsText(e.target.files[0]);
