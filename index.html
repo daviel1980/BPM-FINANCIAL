@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Financial Planning - V63 TOTAL COHERENCE</title>
+  <title>Gestione Cashflow💵: Risparmi per vacanze e tempo libero</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -13,11 +13,10 @@
     body { margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; padding: 1rem 0.5rem; }
     .v-stack { display: flex; flex-direction: column; gap: 1rem; max-width: 700px; margin: 0 auto; }
     .card { background: var(--card-bg); border-radius: 1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.05); padding: 1.25rem; }
-    .title { margin: 0; font-size: 1.5rem; color: var(--accent); text-align: center; font-weight: 800; }
+    .title { margin: 0; font-size: 1.3rem; color: var(--accent); text-align: center; font-weight: 800; line-height: 1.4; }
     
     .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.5rem; }
     .stat { padding: 0.85rem; background: var(--accent-light); border-radius: 0.75rem; cursor: pointer; position: relative; border: 1px solid transparent; transition: 0.2s; }
-    .stat:hover { border-color: var(--accent); }
     .stat-label { font-size: 0.65rem; color: var(--accent); font-weight: 700; text-transform: uppercase; }
     .stat-date { font-size: 0.6rem; color: gray; margin-bottom: 2px; }
     .stat-value { font-size: 1.15rem; font-weight: 800; }
@@ -38,17 +37,17 @@
     .table td { padding: 0.6rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
     .money.in { color: var(--in); font-weight: 600; }
     .money.out { color: var(--out); font-weight: 600; }
-    .edit-input { width: 70px; padding: 4px; border: 1px solid var(--save); border-radius: 4px; text-align: right; font-weight: bold; }
+    .edit-input { width: 75px; padding: 4px; border: 1px solid var(--save); border-radius: 4px; text-align: right; font-weight: 800; }
     
     .modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
-    .modal-content { background: white; padding: 1.5rem; border-radius: 1rem; width: 95%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
+    .modal-content { background: white; padding: 1.5rem; border-radius: 1rem; width: 95%; max-width: 500px; max-height: 85vh; overflow-y: auto; }
     .btn-icon { background: none; border: none; font-size: 1rem; cursor: pointer; padding: 0 4px; }
   </style>
 </head>
 <body>
 
 <div class="v-stack">
-  <div class="card"><h1 class="title">Gestione Cashflow💵: Risparmi per vacanze e tempo libero</h1></div>
+  <div class="card"><h1 class="title">Gestione Cashflow💵:<br>Risparmi per vacanze e tempo libero</h1></div>
 
   <div class="card">
     <div class="stats">
@@ -82,7 +81,7 @@
   </div>
 
   <div class="card">
-    <h2 class="section-title">EVOLUZIONE PATRIMONIALE</h2>
+    <h2 class="section-title">PROIEZIONE PATRIMONIALE</h2>
     <canvas id="balanceChart" height="180"></canvas>
   </div>
 
@@ -111,7 +110,7 @@
   </div>
 
   <div class="card">
-    <h2 class="section-title">SPESE FISSE</h2>
+    <h2 class="section-title">SPESE FISSE PROGRAMMATE</h2>
     <form id="budForm">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:5px">
         <input type="date" id="bDate" required>
@@ -125,9 +124,9 @@
   </div>
 
   <div class="card">
-    <h2 class="section-title">CONFIGURAZIONE</h2>
+    <h2 class="section-title">CONFIGURAZIONE HUB</h2>
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px">
-      <div><label style="font-size:0.7rem">Stipendio (€)</label><input type="number" id="baseSalary"></div>
+      <div><label style="font-size:0.7rem">Stipendio Mensile (€)</label><input type="number" id="baseSalary"></div>
       <div><label style="font-size:0.7rem">Soglia Alert (€)</label><input type="number" id="alertLimit" value="400"></div>
     </div>
     <button onclick="saveConfig()" class="primary" style="margin-top:10px">Aggiorna Parametri</button>
@@ -148,17 +147,36 @@
   const fmt = n => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
   const fmtDate = d => d.split('-').reverse().join('/');
 
-  let state = { movs: [], buds: [], sBal: 0, stipendioBase: 0, alertLimit: 400 };
+  // Dati iniziali ricalcolati per v66
+  let state = { 
+    movs: [
+      {date: "2026-04-11", source: "banca", type: "entrata", amt: 452.58, cat: "Saldo iniziale "},
+      {date: "2026-04-11", source: "banca", type: "uscita", amt: 276.33, cat: "💎 Trasferimento Risparmio"},
+      {date: "2026-04-11", source: "banca", type: "uscita", amt: 100.00, cat: "🏧 Prelievo Contante"},
+      {date: "2026-04-11", source: "contanti", type: "entrata", amt: 100.00, cat: "💵 Carico Cassa"},
+      {date: "2026-04-15", source: "banca", type: "entrata", amt: 400.00, cat: "Inps"},
+      {date: "2026-04-16", source: "contanti", type: "uscita", amt: 10.00, cat: "Libri"}
+    ], 
+    buds: [
+      {date: "2026-04-30", amt: 677.0, cat: "Rata Mutuo", period: "mensile"},
+      {date: "2026-04-16", amt: 50.0, cat: "Calcio Daniel", period: "singola"},
+      {date: "2026-04-20", amt: 9.0, cat: "Netflix ", period: "mensile"}
+    ], 
+    sBal: 276.33, 
+    stipendioBase: 3300, 
+    alertLimit: 400 
+  };
+  
   let editingId = null;
   let chart;
 
   function loadData() {
-    const saved = localStorage.getItem('bpm_v63');
+    const saved = localStorage.getItem('bpm_v66');
     if (saved) state = JSON.parse(saved);
     document.getElementById('baseSalary').value = state.stipendioBase || 0;
     document.getElementById('alertLimit').value = state.alertLimit || 400;
   }
-  function saveData() { localStorage.setItem('bpm_v63', JSON.stringify(state)); }
+  function saveData() { localStorage.setItem('bpm_v66', JSON.stringify(state)); }
 
   function manageFunds(action) {
     let amt = prompt("Importo:");
@@ -187,7 +205,6 @@
     
     const haStip = state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.toLowerCase().includes('stipendio') && m.type === 'entrata');
     const stipAtteso = haStip ? 0 : (state.stipendioBase || 0);
-
     const entrateFutureMese = state.movs.filter(m => m.date.slice(0,7) === curMonth && m.date > today && m.source === 'banca' && m.type === 'entrata').reduce((s,m)=>s+m.amt,0);
     const usciteFutureMese = state.movs.filter(m => m.date.slice(0,7) === curMonth && m.date > today && m.source === 'banca' && m.type === 'uscita').reduce((s,m)=>s+m.amt,0);
 
@@ -198,11 +215,7 @@
       if(!pagata) { fisseRes += f.amt; fisseList.push(f); }
     });
 
-    return { 
-        bancaBal, cashBal, 
-        avail: bancaBal + stipAtteso + entrateFutureMese - usciteFutureMese - fisseRes, 
-        fisseRes, fisseList, stipAtteso, entrateFutureMese, usciteFutureMese
-    };
+    return { bancaBal, cashBal, avail: bancaBal + stipAtteso + entrateFutureMese - usciteFutureMese - fisseRes, fisseRes, fisseList, stipAtteso, entrateFutureMese };
   }
 
   function toggleEdit(i) { editingId = (editingId === i) ? null : i; render(); }
@@ -214,8 +227,7 @@
 
   function render() {
     const data = getCalculatedData();
-    const now = new Date();
-    const dateStr = now.toLocaleDateString('it-IT', { day:'2-digit', month:'short' });
+    const dateStr = new Date().toLocaleDateString('it-IT', { day:'2-digit', month:'short' });
     document.querySelectorAll('.current-date').forEach(el => el.textContent = dateStr);
     
     document.getElementById('actBal').textContent = fmt(data.bancaBal);
@@ -255,22 +267,17 @@
   }
 
   function updateChart(data) {
-    const today = new Date().toISOString().slice(0,10);
     const bancaMovs = [...state.movs].filter(m=>m.source==='banca').sort((a,b)=>new Date(a.date)-new Date(b.date));
-    
     let currentBankSum = 0;
     const labels = [];
     const pointsBanca = [];
-    
     bancaMovs.forEach(m => {
       currentBankSum += (m.type==='entrata' ? m.amt : -m.amt);
       labels.push(fmtDate(m.date));
       pointsBanca.push(currentBankSum);
     });
-
     chart.data.labels = labels;
     chart.data.datasets[0].data = pointsBanca;
-    // La linea disponibile ora è una soglia orizzontale che indica il floor previsto
     chart.data.datasets[1].data = new Array(labels.length).fill(data.avail);
     chart.update();
   }
@@ -291,45 +298,35 @@
   function closeModal() { document.getElementById('detailModal').style.display = 'none'; }
   
   function showActDetail() { 
-    const list = state.movs.filter(m => m.source === 'banca').sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,10);
-    let h = list.map(m => `<div style="font-size:0.8rem; border-bottom:1px solid #eee; padding:5px 0">${fmtDate(m.date)} - ${m.cat}: <span class="money ${m.type}">${m.type==='entrata'?'+':'-'}${fmt(m.amt)}</span></div>`).join('') || "Nessun movimento.";
+    const list = state.movs.filter(m => m.source === 'banca').sort((a,b)=>new Date(b.date)-new Date(a.date));
+    let h = list.map(m => `<div style="font-size:0.8rem; border-bottom:1px solid #eee; padding:5px 0">${fmtDate(m.date)} - ${m.cat}: <span class="money ${m.type}">${m.type==='entrata'?'+':'-'}${fmt(m.amt)}</span></div>`).join('');
     openModal("Dettaglio Hub Banca 💳", h); 
   }
-  
   function showDispDetail() { 
     const d = getCalculatedData();
     let h = `<b>SITUAZIONE FINE MESE:</b><hr>`;
-    if(d.stipAtteso > 0) h += `<div style="font-size:0.8rem">${fmtDate(new Date().toISOString().slice(0,10))} - Stipendio Atteso: <span class="money in">+${fmt(d.stipAtteso)}</span></div>`;
-    if(d.entrateFutureMese > 0) h += `<div style="font-size:0.8rem">Extra Entrate Programmate: <span class="money in">+${fmt(d.entrateFutureMese)}</span></div>`;
-    h += `<br><b>Spese Fisse Residue:</b><br>` + (d.fisseList.map(f => `<div style="font-size:0.8rem">${f.cat}: <span class="money out">-${fmt(f.amt)}</span></div>`).join('') || "Nessuna") + `<hr><b>DISPONIBILITÀ REALE: ${fmt(d.avail)}</b>`;
+    if(d.stipAtteso > 0) h += `<div style="font-size:0.8rem">Stipendio Atteso: <span class="money in">+${fmt(d.stipAtteso)}</span></div>`;
+    h += `<br><b>Fisse da pagare:</b><br>` + (d.fisseList.map(f => `<div style="font-size:0.8rem">${f.cat}: <span class="money out">-${fmt(f.amt)}</span></div>`).join('') || "Nessuna") + `<hr><b>DISPONIBILITÀ REALE: ${fmt(d.avail)}</b>`;
     openModal("Dettaglio Disponibile 🏁", h); 
   }
-
   function showSavDetail() { 
-    const list = state.movs.filter(m => m.cat.includes("Risparmio")).sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,10);
+    const list = state.movs.filter(m => m.cat.includes("Risparmio")).sort((a,b)=>new Date(b.date)-new Date(a.date));
     let h = `Saldo Totale: <b>${fmt(state.sBal)}</b><hr>` + list.map(m => `<div style="font-size:0.8rem; border-bottom:1px solid #eee; padding:5px 0">${fmtDate(m.date)}: <span class="money ${m.type}">${m.type==='entrata'?'+':'-'}${fmt(m.amt)}</span></div>`).join('');
     openModal("Risparmio 💎", h);
   }
-  
   function showCashDetail() { 
-    const list = state.movs.filter(m => m.source === 'contanti').sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,10);
-    let h = list.map(m => `<div style="font-size:0.8rem; border-bottom:1px solid #eee; padding:5px 0">${fmtDate(m.date)} - ${m.cat}: <span class="money ${m.type}">${m.type==='entrata'?'+':'-'}${fmt(m.amt)}</span></div>`).join('') || "Cassa vuota.";
+    const list = state.movs.filter(m => m.source === 'contanti').sort((a,b)=>new Date(b.date)-new Date(a.date));
+    let h = list.map(m => `<div style="font-size:0.8rem; border-bottom:1px solid #eee; padding:5px 0">${fmtDate(m.date)} - ${m.cat}: <span class="money ${m.type}">${m.type==='entrata'?'+':'-'}${fmt(m.amt)}</span></div>`).join('');
     openModal("Dettaglio Cassa 💵", h); 
   }
   
   function saveConfig() { state.stipendioBase = Number(document.getElementById('baseSalary').value); state.alertLimit = Number(document.getElementById('alertLimit').value); saveData(); render(); }
   function delM(i) { if(confirm("Eliminare movimento?")) { state.movs.splice(i,1); render(); } }
-  function delB(i) { if(confirm("Eliminare fissa?")) { state.buds.splice(i,1); render(); } }
+  function delB(i) { if(confirm("Eliminare spesa fissa?")) { state.buds.splice(i,1); render(); } }
 
   document.getElementById('movForm').onsubmit = e => {
     e.preventDefault();
-    state.movs.push({ 
-        date: document.getElementById('mDate').value, 
-        source: document.getElementById('mSourceSelect').value, 
-        type: document.getElementById('mType').value, 
-        amt: Number(document.getElementById('mAmt').value), 
-        cat: document.getElementById('mCat').value 
-    });
+    state.movs.push({ date: document.getElementById('mDate').value, source: document.getElementById('mSourceSelect').value, type: document.getElementById('mType').value, amt: Number(document.getElementById('mAmt').value), cat: document.getElementById('mCat').value });
     render(); e.target.reset();
   };
   document.getElementById('budForm').onsubmit = e => {
@@ -339,7 +336,7 @@
   };
 
   function exportData() {
-    const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'bpm_v63.json'; a.click();
+    const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'bpm_v66.json'; a.click();
   }
   function importData(e) {
     const r = new FileReader(); r.onload = x => { state = JSON.parse(x.target.result); render(); }; r.readAsText(e.target.files[0]);
