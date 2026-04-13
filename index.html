@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gestione Cashflow v69 - Prudenza & Risparmio</title>
+  <title>Gestione Cashflow v70 - Versione Completa</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
       --bg: #f7f9fb; --card-bg: #ffffff; --accent: #01696f; --accent-light: #e8f5f5;
-      --border: #e0e6ed; --text: #111827; --in: #009966; --out: #cc0052; --save: #4a90e2; --cash: #f59e0b;
+      --border: #e0e6ed; --text: #111827; --in: #009966; --out: #cc0052; --save: #4a90e2; --cash: #f59e0b; --varie: #8b5cf6;
     }
     body { margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; padding: 1rem 0.5rem; }
     .v-stack { display: flex; flex-direction: column; gap: 1rem; max-width: 700px; margin: 0 auto; }
@@ -16,7 +16,7 @@
     .title { margin: 0; font-size: 1.3rem; color: var(--accent); text-align: center; font-weight: 800; line-height: 1.4; }
     
     .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.5rem; }
-    .stat { padding: 0.85rem; background: var(--accent-light); border-radius: 0.75rem; cursor: pointer; position: relative; border: 1px solid transparent; transition: 0.2s; }
+    .stat { padding: 0.85rem; background: var(--accent-light); border-radius: 0.75rem; cursor: pointer; position: relative; border: 1px solid transparent; }
     .stat-label { font-size: 0.65rem; color: var(--accent); font-weight: 700; text-transform: uppercase; }
     .stat-value { font-size: 1.15rem; font-weight: 800; }
     
@@ -39,13 +39,13 @@
     .modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
     .modal-content { background: white; padding: 1.5rem; border-radius: 1rem; width: 95%; max-width: 500px; max-height: 85vh; overflow-y: auto; }
     .btn-icon { background: none; border: none; font-size: 1rem; cursor: pointer; padding: 0 4px; }
-    .advice { font-size: 0.65rem; font-weight: 700; margin-top: 5px; }
+    .advice { font-size: 0.6rem; font-weight: 700; margin-top: 5px; }
   </style>
 </head>
 <body>
 
 <div class="v-stack">
-  <div class="card"><h1 class="title">Gestione Cashflow💵:<br>Risparmi per vacanze e tempo libero</h1></div>
+  <div class="card"><h1 class="title">Gestione Cashflow💵 v70</h1></div>
 
   <div class="card">
     <div class="stats">
@@ -57,17 +57,22 @@
         <div class="stat-label">DISPONIBILE 🏁</div>
         <div id="curBal" class="stat-value">0 €</div>
       </div>
-      <div class="stat" style="background:#eff6ff" onclick="showSavDetail()">
+      <div class="stat" style="color:var(--save); background:#eff6ff" onclick="showSavDetail()">
         <div class="quick-actions">
           <button class="btn-small" onclick="event.stopPropagation(); manageFunds('save_in');">➕</button>
           <button class="btn-small" onclick="event.stopPropagation(); manageFunds('save_out');">🔙</button>
         </div>
-        <div class="stat-label" style="color:var(--save)">RISPARMIO 💎</div>
-        <div id="savBal" class="stat-value" style="color:var(--save)">0 €</div>
-        <div class="advice" style="color:var(--save)">🎯 20 del mese: +200€</div>
+        <div class="stat-label">RISPARMIO 💎</div>
+        <div id="savBal" class="stat-value">0 €</div>
+        <div class="advice">🎯 Target 20: +200€</div>
       </div>
-      <div class="stat" id="statVarie" onclick="showVarieDetail()">
-        <div class="stat-label">SPESE VARIE 🛍️</div>
+      <div class="stat" style="color:var(--cash); background:#fffbeb" onclick="showCashDetail()">
+        <button class="btn-small" style="position:absolute; top:8px; right:8px;" onclick="event.stopPropagation(); manageFunds('cash_in');">➕</button>
+        <div class="stat-label">CONTANTE 💵</div>
+        <div id="cashBal" class="stat-value">0 €</div>
+      </div>
+      <div class="stat" style="color:var(--varie); background:#f5f3ff; grid-column: span 2;" onclick="showVarieDetail()">
+        <div class="stat-label">PRUDENZA SPESE VARIE (Abbigliamento/Svago) 🛍️</div>
         <div id="varieBal" class="stat-value">0 €</div>
         <div id="varieAdvice" class="advice"></div>
       </div>
@@ -80,33 +85,47 @@
     <form id="movForm">
       <input type="date" id="mDate" required>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:5px 0">
-        <select id="mSourceSelect"><option value="banca">💳 Banca</option><option value="contanti">💵 Cassa Contante</option></select>
+        <select id="mSourceSelect"><option value="banca">💳 Banca</option><option value="contanti">💵 Contanti</option></select>
         <select id="mType"><option value="uscita">Uscita (-)</option><option value="entrata">Entrata (+)</option></select>
       </div>
       <input type="number" id="mAmt" step="0.01" placeholder="Importo €" required>
-      <input type="text" id="mCat" placeholder="Descrizione (es. Enel, Jeans, Cena...)" required>
-      <button type="submit" class="primary">Registra Operazione</button>
+      <input type="text" id="mCat" placeholder="Descrizione (es. Paypal, Enel...)" required>
+      <button type="submit" class="primary">SALVA OPERAZIONE</button>
     </form>
   </div>
 
-  <div id="detailModal" class="modal" onclick="closeModal()">
-    <div class="modal-content" onclick="event.stopPropagation()">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-        <h3 id="modalTitle">Dettaglio</h3>
-        <button onclick="closeModal()">X</button>
+  <div class="card">
+    <h2 class="section-title">SPESE FISSE PROGRAMMATE</h2>
+    <form id="budForm">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
+        <input type="date" id="bDate" required>
+        <select id="bPeriod"><option value="mensile">Ogni Mese</option><option value="singola">Singola</option></select>
       </div>
-      <div id="modalBody"></div>
-    </div>
+      <input type="number" id="bAmt" step="0.01" placeholder="Importo €" required>
+      <input type="text" id="bCat" placeholder="Nome Spesa (es. Mutuo)" required>
+      <button type="submit" class="primary">AGGIUNGI FISSA</button>
+    </form>
+    <div id="budList" style="margin-top:10px"></div>
   </div>
 
   <div class="card">
     <h2 class="section-title">STORICO MOVIMENTI</h2>
     <table class="table"><tbody id="rows"></tbody></table>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:1rem">
-      <button onclick="exportData()">Backup (Salva)</button>
-      <button onclick="document.getElementById('importFile').click()">Importa (Ricarica)</button>
+      <button onclick="exportData()">Backup</button>
+      <button onclick="document.getElementById('importFile').click()">Importa</button>
     </div>
     <input type="file" id="importFile" style="display:none" onchange="importData(event)">
+  </div>
+</div>
+
+<div id="detailModal" class="modal" onclick="closeModal()">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <h3 id="modalTitle" style="margin:0">Dettaglio</h3>
+      <button onclick="closeModal()" style="width:auto; padding:5px 10px">X</button>
+    </div>
+    <div id="modalBody"></div>
   </div>
 </div>
 
@@ -118,69 +137,57 @@
   let editingId = null;
 
   function loadData() {
-    const saved = localStorage.getItem('bpm_v69');
+    const saved = localStorage.getItem('bpm_v70');
     if (saved) state = JSON.parse(saved);
     render();
   }
-  function saveData() { localStorage.setItem('bpm_v69', JSON.stringify(state)); }
+  function saveData() { localStorage.setItem('bpm_v70', JSON.stringify(state)); }
 
   function getCalculatedData() {
     const today = new Date();
     const todayStr = today.toISOString().slice(0,10);
     const curMonth = todayStr.slice(0,7);
     
-    // 1. Saldo Banca Reale
     const bancaBal = state.movs.filter(m => m.date <= todayStr && m.source === 'banca').reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
     const cashBal = state.movs.filter(m => m.source === 'contanti' && m.date <= todayStr).reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
     
-    // 2. Controllo Risparmio 200€ al 20 del mese
-    const risparmioEffettuato = state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.includes("Risparmio Fisso"));
-    const prenotazioneRisparmio = (risparmioEffettuato || today.getDate() >= 20) ? 0 : 200;
+    const risparmioFatto = state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.includes("Risparmio Fisso"));
+    const prenotazioneRisparmio = (risparmioFatto || today.getDate() >= 20) ? 0 : 200;
 
-    // 3. Spese fisse residue
     let fisseRes = 0;
+    let fisseList = [];
     state.buds.forEach(f => {
       const pagata = state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.toLowerCase().includes(f.cat.toLowerCase()));
-      if(!pagata) fisseRes += f.amt;
+      if(!pagata) { fisseRes += f.amt; fisseList.push(f); }
     });
 
-    // 4. Budget Spese Varie (Prudenza)
     const budgetVarie = bancaBal - fisseRes - prenotazioneRisparmio;
 
-    return { bancaBal, cashBal, avail: bancaBal + state.stipendioBase - fisseRes - prenotazioneRisparmio, budgetVarie, prenotazioneRisparmio };
+    return { bancaBal, cashBal, avail: bancaBal + state.stipendioBase - fisseRes - prenotazioneRisparmio, budgetVarie, fisseList };
   }
 
   function render() {
-    const data = getCalculatedData();
-    document.getElementById('actBal').textContent = fmt(data.bancaBal);
-    document.getElementById('curBal').textContent = fmt(data.avail);
+    const d = getCalculatedData();
+    document.getElementById('actBal').textContent = fmt(d.bancaBal);
+    document.getElementById('curBal').textContent = fmt(d.avail);
     document.getElementById('savBal').textContent = fmt(state.sBal);
-    document.getElementById('varieBal').textContent = fmt(data.budgetVarie > 0 ? data.budgetVarie : 0);
+    document.getElementById('cashBal').textContent = fmt(d.cashBal);
+    document.getElementById('varieBal').textContent = fmt(d.budgetVarie > 0 ? d.budgetVarie : 0);
 
     const advice = document.getElementById('varieAdvice');
-    if(data.budgetVarie < 100) {
-        advice.textContent = "⚠️ PRUDENZA: Pochi margini";
-        advice.style.color = "red";
-    } else {
-        advice.textContent = "✅ Spese varie OK";
-        advice.style.color = "green";
-    }
+    if(d.budgetVarie < 100) { advice.textContent = "⚠️ PRUDENZA: Copri prima le fisse e il risparmio del 20"; advice.style.color = "red"; }
+    else { advice.textContent = "✅ Puoi spendere per abbigliamento/tempo libero"; advice.style.color = "green"; }
 
     const banner = document.getElementById('alertBanner');
-    if(data.avail < state.alertLimit) {
-        banner.className = "alert-warn";
-        banner.textContent = `🚨 RISCHIO ROSSO: ${fmt(data.avail)}`;
-    } else {
-        banner.className = "alert-ok";
-        banner.textContent = "✅ DISPONIBILITÀ OK";
-    }
+    if(d.avail < state.alertLimit) { banner.className = "alert-warn"; banner.textContent = `🚨 RISCHIO ROSSO: ${fmt(d.avail)}`; }
+    else { banner.className = "alert-ok"; banner.textContent = "✅ DISPONIBILITÀ OK"; }
 
     const sorted = [...state.movs].sort((a,b) => new Date(b.date) - new Date(a.date));
     document.getElementById('rows').innerHTML = sorted.map((m) => {
       const idx = state.movs.indexOf(m);
       const isEditing = editingId === idx;
       return `<tr>
-        <td><small>${fmtDate(m.date)}</small><br><b>${m.cat}</b></td>
+        <td><small>${fmtDate(m.date)}</small> ${m.source==='contanti'?'[CASH]':''}<br><b>${m.cat}</b></td>
         <td style="text-align:right" class="money ${m.type}">
           ${isEditing ? `<input type="number" id="edit-${idx}" style="width:70px" value="${m.amt}">` : (m.type==='entrata'?'+':'-') + fmt(m.amt)}
         </td>
@@ -191,55 +198,67 @@
       </tr>`;
     }).join('');
 
+    document.getElementById('budList').innerHTML = state.buds.map((b,i) => `
+      <div style="display:flex;justify-content:space-between;padding:8px;background:#f9f9f9;margin-bottom:5px;border-radius:8px;border-left:4px solid var(--accent)">
+        <span>${b.cat}: <b>${fmt(b.amt)}</b></span>
+        <button onclick="delB(${i})" style="width:auto;background:none;border:none;cursor:pointer">🗑️</button>
+      </div>`).join('');
+
     saveData();
   }
 
-  function toggleEdit(i) { editingId = (editingId === i) ? null : i; render(); }
-  function saveEdit(i) {
-    state.movs[i].amt = Number(document.getElementById(`edit-${i}`).value);
-    editingId = null; render();
-  }
-  function delM(i) { if(confirm("Eliminare?")) { state.movs.splice(i,1); render(); } }
-
   function manageFunds(action) {
-    let amt = prompt("Importo:");
-    if(!amt) return;
-    const val = Number(amt);
-    const date = new Date().toISOString().slice(0,10);
+    let amt = prompt("Importo:"); if(!amt) return;
+    const val = Number(amt); const date = new Date().toISOString().slice(0,10);
     if(action === 'save_in') { state.sBal += val; state.movs.push({ date, source:'banca', type:'uscita', amt:val, cat:"💎 Trasferimento Risparmio" }); }
     else if(action === 'save_out') { state.sBal -= val; state.movs.push({ date, source:'banca', type:'entrata', amt:val, cat:"🔙 Revoca Risparmio" }); }
+    else if(action === 'cash_in') { 
+        state.movs.push({ date, source:'banca', type:'uscita', amt:val, cat:"🏧 Prelievo Contante" });
+        state.movs.push({ date, source:'contanti', type:'entrata', amt:val, cat:"💵 Carico Cassa" });
+    }
     render();
   }
 
   function exportData() {
-    const a = document.createElement('a');
-    a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state));
-    a.download = 'cashflow_v69.json'; a.click();
+    const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state));
+    a.download = 'cashflow_v70.json'; a.click();
   }
   function importData(e) {
-    const r = new FileReader();
-    r.onload = x => { state = JSON.parse(x.target.result); render(); };
+    const r = new FileReader(); r.onload = x => { state = JSON.parse(x.target.result); render(); };
     r.readAsText(e.target.files[0]);
   }
 
   document.getElementById('movForm').onsubmit = e => {
     e.preventDefault();
-    state.movs.push({ 
-      date: document.getElementById('mDate').value, 
-      source: document.getElementById('mSourceSelect').value, 
-      type: document.getElementById('mType').value, 
-      amt: Number(document.getElementById('mAmt').value), 
-      cat: document.getElementById('mCat').value 
-    });
+    state.movs.push({ date: document.getElementById('mDate').value, source: document.getElementById('mSourceSelect').value, type: document.getElementById('mType').value, amt: Number(document.getElementById('mAmt').value), cat: document.getElementById('mCat').value });
+    render(); e.target.reset();
+  };
+  document.getElementById('budForm').onsubmit = e => {
+    e.preventDefault();
+    state.buds.push({ date: document.getElementById('bDate').value, amt: Number(document.getElementById('bAmt').value), cat: document.getElementById('bCat').value, period: document.getElementById('bPeriod').value });
     render(); e.target.reset();
   };
 
+  function toggleEdit(i) { editingId = (editingId === i) ? null : i; render(); }
+  function saveEdit(i) { state.movs[i].amt = Number(document.getElementById(`edit-${i}`).value); editingId = null; render(); }
+  function delM(i) { if(confirm("Eliminare?")) { state.movs.splice(i,1); render(); } }
+  function delB(i) { if(confirm("Eliminare fissa?")) { state.buds.splice(i,1); render(); } }
+
   function openModal(t, b) { document.getElementById('modalTitle').innerText = t; document.getElementById('modalBody').innerHTML = b; document.getElementById('detailModal').style.display = 'flex'; }
   function closeModal() { document.getElementById('detailModal').style.display = 'none'; }
-  function showActDetail() { openModal("Banca 💳", "Saldo reale attuale in conto."); }
-  function showDispDetail() { openModal("Disponibile 🏁", "Saldo + Stipendio - Spese Fisse."); }
-  function showSavDetail() { openModal("Risparmio 💎", "Fondo accumulato per vacanze."); }
-  function showVarieDetail() { openModal("Spese Varie 🛍️", "Margine per shopping e svago dopo aver tolto il risparmio fisso e le bollette."); }
+  
+  function showActDetail() { 
+    const hist = state.movs.filter(m => m.source === 'banca').slice(0,5).map(m => `<div>${m.cat}: ${fmt(m.amt)}</div>`).join('');
+    openModal("Hub Banca 💳", `Saldo attuale sul conto reale.<br><br>Ultime operazioni:<br>${hist}`); 
+  }
+  function showDispDetail() { 
+    const d = getCalculatedData();
+    const list = d.fisseList.map(f => `<div>${f.cat}: -${fmt(f.amt)}</div>`).join('');
+    openModal("Disponibile 🏁", `Proiezione fine mese inclusa di stipendio.<br><br>Fisse mancanti:<br>${list}`); 
+  }
+  function showSavDetail() { openModal("Risparmio 💎", `Totale accantonato per obiettivi: ${fmt(state.sBal)}`); }
+  function showCashDetail() { openModal("Contante 💵", `Soldi fisici nel portafoglio.`); }
+  function showVarieDetail() { openModal("Spese Varie 🛍️", "Margine calcolato sottraendo dal saldo attuale le spese fisse che devono ancora uscire e il risparmio del 20."); }
 
   loadData();
 </script>
