@@ -3,68 +3,71 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gestione Cashflow v68 - Risparmio Fisso</title>
+  <title>Gestione Cashflow v69 - Prudenza & Risparmio</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
-      --bg: #f3f4f6; --card-bg: #ffffff; --accent: #01696f; --accent-light: #e8f5f5;
+      --bg: #f7f9fb; --card-bg: #ffffff; --accent: #01696f; --accent-light: #e8f5f5;
       --border: #e0e6ed; --text: #111827; --in: #009966; --out: #cc0052; --save: #4a90e2; --cash: #f59e0b;
-      --varie: #8b5cf6;
     }
     body { margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; padding: 1rem 0.5rem; }
     .v-stack { display: flex; flex-direction: column; gap: 1rem; max-width: 700px; margin: 0 auto; }
     .card { background: var(--card-bg); border-radius: 1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.05); padding: 1.25rem; }
-    .title { margin: 0; font-size: 1.2rem; color: var(--accent); text-align: center; font-weight: 800; }
+    .title { margin: 0; font-size: 1.3rem; color: var(--accent); text-align: center; font-weight: 800; line-height: 1.4; }
     
     .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.5rem; }
-    .stat { padding: 0.85rem; border-radius: 0.75rem; cursor: pointer; position: relative; border: 1px solid transparent; }
-    .stat-label { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; margin-bottom: 4px; }
-    .stat-value { font-size: 1.1rem; font-weight: 800; }
+    .stat { padding: 0.85rem; background: var(--accent-light); border-radius: 0.75rem; cursor: pointer; position: relative; border: 1px solid transparent; transition: 0.2s; }
+    .stat-label { font-size: 0.65rem; color: var(--accent); font-weight: 700; text-transform: uppercase; }
+    .stat-value { font-size: 1.15rem; font-weight: 800; }
     
-    /* Nuovi Colori Tab */
-    .bg-banca { background: #e0f2f1; color: #00695c; }
-    .bg-disp { background: #f3e5f5; color: #7b1fa2; }
-    .bg-save { background: #e3f2fd; color: #1976d2; }
-    .bg-varie { background: #fff3e0; color: #ef6c00; border: 2px dashed #ffb74d; }
-
-    #alertBanner { padding: 0.75rem; border-radius: 0.75rem; font-weight: 700; text-align: center; font-size: 0.8rem; margin-top: 0.5rem; }
+    .quick-actions { display: flex; gap: 4px; position: absolute; top: 8px; right: 8px; }
+    .btn-small { background: white; border: 1px solid currentColor; font-weight: 700; padding: 2px 4px; font-size: 0.55rem; border-radius: 4px; cursor: pointer; }
+    
+    #alertBanner { padding: 0.75rem; border-radius: 0.75rem; font-weight: 700; text-align: center; font-size: 0.85rem; margin-top: 0.5rem; }
     .alert-ok { background: #dcfce7; color: #166534; }
     .alert-warn { background: #fee2e2; color: #991b1b; }
 
-    .section-title { margin: 1rem 0 0.5rem; font-size: 0.9rem; font-weight: 700; color: var(--accent); text-transform: uppercase; }
-    input, select, button { border-radius: 0.5rem; border: 1px solid var(--border); padding: 0.6rem; font-size: 0.85rem; width: 100%; margin-bottom: 0.5rem; }
-    button.primary { background: var(--accent); color: #fff; border: none; font-weight: 700; cursor: pointer; }
+    .section-title { margin-bottom: 0.8rem; font-size: 1rem; font-weight: 600; border-bottom: 2px solid var(--accent); padding-bottom: 0.3rem; display: inline-block; }
+    input, select, button { border-radius: 0.5rem; border: 1px solid var(--border); padding: 0.6rem; font-size: 0.875rem; width: 100%; box-sizing: border-box; margin-bottom: 5px; }
+    button.primary { background: var(--accent); color: #fff; border: none; font-weight: 600; cursor: pointer; }
     
-    .table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-    .table td { padding: 0.6rem; border-bottom: 1px solid var(--border); }
-    .money.in { color: var(--in); font-weight: 700; }
-    .money.out { color: var(--out); font-weight: 700; }
-
-    .advice { font-size: 0.65rem; font-weight: 600; margin-top: 4px; }
+    .table { width: 100%; border-collapse: collapse; }
+    .table td { padding: 0.6rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+    .money.in { color: var(--in); font-weight: 600; }
+    .money.out { color: var(--out); font-weight: 600; }
+    
+    .modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
+    .modal-content { background: white; padding: 1.5rem; border-radius: 1rem; width: 95%; max-width: 500px; max-height: 85vh; overflow-y: auto; }
+    .btn-icon { background: none; border: none; font-size: 1rem; cursor: pointer; padding: 0 4px; }
+    .advice { font-size: 0.65rem; font-weight: 700; margin-top: 5px; }
   </style>
 </head>
 <body>
 
 <div class="v-stack">
-  <div class="card"><h1 class="title">GESTIONE CASHFLOW 💵 v68</h1></div>
+  <div class="card"><h1 class="title">Gestione Cashflow💵:<br>Risparmi per vacanze e tempo libero</h1></div>
 
   <div class="card">
     <div class="stats">
-      <div class="stat bg-banca" onclick="showDetail('banca')">
-        <div class="stat-label">HUB BANCA</div>
+      <div class="stat" onclick="showActDetail()">
+        <div class="stat-label">HUB BANCA 💳</div>
         <div id="actBal" class="stat-value">0 €</div>
       </div>
-      <div class="stat bg-disp" onclick="showDetail('disp')">
-        <div class="stat-label">DISPONIBILE FINALE</div>
+      <div class="stat" onclick="showDispDetail()">
+        <div class="stat-label">DISPONIBILE 🏁</div>
         <div id="curBal" class="stat-value">0 €</div>
       </div>
-      <div class="stat bg-save" onclick="showDetail('save')">
-        <div class="stat-label">CARTA RISPARMIO</div>
-        <div id="savBal" class="stat-value">0 €</div>
-        <div class="advice">🎯 Target 20/mese: +200€</div>
+      <div class="stat" style="background:#eff6ff" onclick="showSavDetail()">
+        <div class="quick-actions">
+          <button class="btn-small" onclick="event.stopPropagation(); manageFunds('save_in');">➕</button>
+          <button class="btn-small" onclick="event.stopPropagation(); manageFunds('save_out');">🔙</button>
+        </div>
+        <div class="stat-label" style="color:var(--save)">RISPARMIO 💎</div>
+        <div id="savBal" class="stat-value" style="color:var(--save)">0 €</div>
+        <div class="advice" style="color:var(--save)">🎯 20 del mese: +200€</div>
       </div>
-      <div class="stat bg-varie" onclick="showDetail('varie')">
-        <div class="stat-label">TEMPO LIBERO / ABBIGL.</div>
+      <div class="stat" id="statVarie" onclick="showVarieDetail()">
+        <div class="stat-label">SPESE VARIE 🛍️</div>
         <div id="varieBal" class="stat-value">0 €</div>
         <div id="varieAdvice" class="advice"></div>
       </div>
@@ -73,47 +76,53 @@
   </div>
 
   <div class="card">
-    <h2 class="section-title">PROIEZIONE MENSILE</h2>
-    <canvas id="balanceChart" height="150"></canvas>
-  </div>
-
-  <div class="card">
-    <h2 class="section-title">REGISTRA SPESA VARIA / MOVIMENTO</h2>
+    <h2 class="section-title">REGISTRA MOVIMENTO</h2>
     <form id="movForm">
       <input type="date" id="mDate" required>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
-        <select id="mSourceSelect"><option value="banca">💳 Banca</option><option value="contanti">💵 Contanti</option></select>
-        <select id="mCatType"><option value="ordinaria">Spesa Fissa/In</option><option value="varie">Abbigliamento/Svago</option></select>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:5px 0">
+        <select id="mSourceSelect"><option value="banca">💳 Banca</option><option value="contanti">💵 Cassa Contante</option></select>
+        <select id="mType"><option value="uscita">Uscita (-)</option><option value="entrata">Entrata (+)</option></select>
       </div>
       <input type="number" id="mAmt" step="0.01" placeholder="Importo €" required>
-      <input type="text" id="mDesc" placeholder="Descrizione (es. Jeans, Cena...)" required>
-      <button type="submit" class="primary">REGISTRA</button>
+      <input type="text" id="mCat" placeholder="Descrizione (es. Enel, Jeans, Cena...)" required>
+      <button type="submit" class="primary">Registra Operazione</button>
     </form>
   </div>
 
+  <div id="detailModal" class="modal" onclick="closeModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <h3 id="modalTitle">Dettaglio</h3>
+        <button onclick="closeModal()">X</button>
+      </div>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
   <div class="card">
-    <h2 class="section-title">STORICO RECENTE</h2>
+    <h2 class="section-title">STORICO MOVIMENTI</h2>
     <table class="table"><tbody id="rows"></tbody></table>
-    <button onclick="exportData()" style="margin-top:10px; background:#eee">BACKUP DATI (JSON)</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:1rem">
+      <button onclick="exportData()">Backup (Salva)</button>
+      <button onclick="document.getElementById('importFile').click()">Importa (Ricarica)</button>
+    </div>
+    <input type="file" id="importFile" style="display:none" onchange="importData(event)">
   </div>
 </div>
 
 <script>
   const fmt = n => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
-  
-  let state = { 
-    movs: [], 
-    buds: [], // Le tue fisse: Mutuo, Netflix, ecc.
-    sBal: 276.33, 
-    stipendioBase: 3300, 
-    alertLimit: 400 
-  };
+  const fmtDate = d => d.split('-').reverse().join('/');
+
+  let state = { movs: [], buds: [], sBal: 0, stipendioBase: 3300, alertLimit: 400 };
+  let editingId = null;
 
   function loadData() {
-    const saved = localStorage.getItem('bpm_v68');
+    const saved = localStorage.getItem('bpm_v69');
     if (saved) state = JSON.parse(saved);
     render();
   }
+  function saveData() { localStorage.setItem('bpm_v69', JSON.stringify(state)); }
 
   function getCalculatedData() {
     const today = new Date();
@@ -122,115 +131,115 @@
     
     // 1. Saldo Banca Reale
     const bancaBal = state.movs.filter(m => m.date <= todayStr && m.source === 'banca').reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
+    const cashBal = state.movs.filter(m => m.source === 'contanti' && m.date <= todayStr).reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
     
-    // 2. Calcolo Risparmio Fisso (20 del mese)
-    const risparmioGiaFatto = state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.includes("Risparmio Fisso"));
-    const risparmioTarget = 200;
-    const dataRisparmio = curMonth + "-20";
-    let risparmioDaAccantonare = (risparmioGiaFatto || today.getDate() >= 20) ? 0 : risparmioTarget;
+    // 2. Controllo Risparmio 200€ al 20 del mese
+    const risparmioEffettuato = state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.includes("Risparmio Fisso"));
+    const prenotazioneRisparmio = (risparmioEffettuato || today.getDate() >= 20) ? 0 : 200;
 
-    // 3. Spese Fisse residue del mese
-    let fisseResidue = 0;
-    state.buds.forEach(b => {
-      const pagata = state.movs.some(m => m.date.slice(0,7) === curMonth && m.desc.toLowerCase().includes(b.cat.toLowerCase()));
-      if(!pagata) fisseResidue += b.amt;
+    // 3. Spese fisse residue
+    let fisseRes = 0;
+    state.buds.forEach(f => {
+      const pagata = state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.toLowerCase().includes(f.cat.toLowerCase()));
+      if(!pagata) fisseRes += f.amt;
     });
 
-    // 4. Budget TEMPO LIBERO / ABBIGLIAMENTO
-    // Idea: è una % del rimanente dopo fisse e risparmio, o un tetto fisso. 
-    // Qui calcoliamo quanto "potresti" spendere oggi senza intaccare il risparmio del 20.
-    const budgetVarieSafe = bancaBal - fisseResidue - risparmioDaAccantonare;
+    // 4. Budget Spese Varie (Prudenza)
+    const budgetVarie = bancaBal - fisseRes - prenotazioneRisparmio;
 
-    return {
-      bancaBal,
-      avail: bancaBal + state.stipendioBase - fisseResidue - (risparmioGiaFatto ? 0 : 200),
-      risparmioGiaFatto,
-      budgetVarieSafe,
-      risparmioDaAccantonare
-    };
+    return { bancaBal, cashBal, avail: bancaBal + state.stipendioBase - fisseRes - prenotazioneRisparmio, budgetVarie, prenotazioneRisparmio };
   }
 
   function render() {
-    const d = getCalculatedData();
-    document.getElementById('actBal').textContent = fmt(d.bancaBal);
-    document.getElementById('curBal').textContent = fmt(d.avail);
+    const data = getCalculatedData();
+    document.getElementById('actBal').textContent = fmt(data.bancaBal);
+    document.getElementById('curBal').textContent = fmt(data.avail);
     document.getElementById('savBal').textContent = fmt(state.sBal);
-    document.getElementById('varieBal').textContent = fmt(d.budgetVarieSafe > 0 ? d.budgetVarieSafe : 0);
+    document.getElementById('varieBal').textContent = fmt(data.budgetVarie > 0 ? data.budgetVarie : 0);
 
-    const vAdvice = document.getElementById('varieAdvice');
-    if(d.budgetVarieSafe < 100) {
-        vAdvice.textContent = "⚠️ PRUDENZA: Pochi margini";
-        vAdvice.style.color = "red";
+    const advice = document.getElementById('varieAdvice');
+    if(data.budgetVarie < 100) {
+        advice.textContent = "⚠️ PRUDENZA: Pochi margini";
+        advice.style.color = "red";
     } else {
-        vAdvice.textContent = "✅ Acquisiti possibili";
-        vAdvice.style.color = "green";
+        advice.textContent = "✅ Spese varie OK";
+        advice.style.color = "green";
     }
 
     const banner = document.getElementById('alertBanner');
-    if(d.bancaBal < d.risparmioDaAccantonare + 100) {
+    if(data.avail < state.alertLimit) {
         banner.className = "alert-warn";
-        banner.textContent = "ATTENZIONE: Saldo Hub basso per coprire il risparmio del 20!";
+        banner.textContent = `🚨 RISCHIO ROSSO: ${fmt(data.avail)}`;
     } else {
         banner.className = "alert-ok";
-        banner.textContent = "SITUAZIONE BANCA SOTTO CONTROLLO";
+        banner.textContent = "✅ DISPONIBILITÀ OK";
     }
 
-    const sorted = [...state.movs].sort((a,b) => new Date(b.date) - new Date(a.date)).reverse();
-    document.getElementById('rows').innerHTML = sorted.slice(0,8).map(m => `
-      <tr>
-        <td>${m.date.split('-')[2]}/${m.date.split('-')[1]}<br><b>${m.desc}</b></td>
-        <td class="money ${m.type}" style="text-align:right">${m.type==='entrata'?'+':'-'}${fmt(m.amt)}</td>
-      </tr>
-    `).join('');
+    const sorted = [...state.movs].sort((a,b) => new Date(b.date) - new Date(a.date));
+    document.getElementById('rows').innerHTML = sorted.map((m) => {
+      const idx = state.movs.indexOf(m);
+      const isEditing = editingId === idx;
+      return `<tr>
+        <td><small>${fmtDate(m.date)}</small><br><b>${m.cat}</b></td>
+        <td style="text-align:right" class="money ${m.type}">
+          ${isEditing ? `<input type="number" id="edit-${idx}" style="width:70px" value="${m.amt}">` : (m.type==='entrata'?'+':'-') + fmt(m.amt)}
+        </td>
+        <td style="text-align:right">
+          <button class="btn-icon" onclick="${isEditing ? `saveEdit(${idx})` : `toggleEdit(${idx})`}">${isEditing ? '💾' : '✏️'}</button>
+          <button class="btn-icon" onclick="delM(${idx})">🗑️</button>
+        </td>
+      </tr>`;
+    }).join('');
 
-    localStorage.setItem('bpm_v68', JSON.stringify(state));
-    updateChart(d);
+    saveData();
   }
 
-  function updateChart(d) {
-    const ctx = document.getElementById('balanceChart').getContext('2d');
-    if(chart) chart.destroy();
-    chart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: ['In Banca Ora', 'Budget Varie', 'Target Risparmio'],
-        datasets: [{
-          data: [d.bancaBal, d.budgetVarieSafe, 200],
-          backgroundColor: ['#01696f', '#8b5cf6', '#4a90e2']
-        }]
-      },
-      options: { plugins: { legend: { display: false } } }
-    });
+  function toggleEdit(i) { editingId = (editingId === i) ? null : i; render(); }
+  function saveEdit(i) {
+    state.movs[i].amt = Number(document.getElementById(`edit-${i}`).value);
+    editingId = null; render();
   }
-  let chart;
+  function delM(i) { if(confirm("Eliminare?")) { state.movs.splice(i,1); render(); } }
+
+  function manageFunds(action) {
+    let amt = prompt("Importo:");
+    if(!amt) return;
+    const val = Number(amt);
+    const date = new Date().toISOString().slice(0,10);
+    if(action === 'save_in') { state.sBal += val; state.movs.push({ date, source:'banca', type:'uscita', amt:val, cat:"💎 Trasferimento Risparmio" }); }
+    else if(action === 'save_out') { state.sBal -= val; state.movs.push({ date, source:'banca', type:'entrata', amt:val, cat:"🔙 Revoca Risparmio" }); }
+    render();
+  }
+
+  function exportData() {
+    const a = document.createElement('a');
+    a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state));
+    a.download = 'cashflow_v69.json'; a.click();
+  }
+  function importData(e) {
+    const r = new FileReader();
+    r.onload = x => { state = JSON.parse(x.target.result); render(); };
+    r.readAsText(e.target.files[0]);
+  }
 
   document.getElementById('movForm').onsubmit = e => {
     e.preventDefault();
-    const amt = Number(document.getElementById('mAmt').value);
-    const desc = document.getElementById('mDesc').value;
-    const isVarie = document.getElementById('mCatType').value === 'varie';
-    
-    state.movs.push({
-      date: document.getElementById('mDate').value,
-      source: document.getElementById('mSourceSelect').value,
-      type: 'uscita',
-      amt: amt,
-      desc: isVarie ? "🛍️ " + desc : desc
+    state.movs.push({ 
+      date: document.getElementById('mDate').value, 
+      source: document.getElementById('mSourceSelect').value, 
+      type: document.getElementById('mType').value, 
+      amt: Number(document.getElementById('mAmt').value), 
+      cat: document.getElementById('mCat').value 
     });
-    
-    render();
-    e.target.reset();
+    render(); e.target.reset();
   };
 
-  function exportData() {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href",     dataStr);
-    downloadAnchorNode.setAttribute("download", "cashflow_v68.json");
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
-  }
+  function openModal(t, b) { document.getElementById('modalTitle').innerText = t; document.getElementById('modalBody').innerHTML = b; document.getElementById('detailModal').style.display = 'flex'; }
+  function closeModal() { document.getElementById('detailModal').style.display = 'none'; }
+  function showActDetail() { openModal("Banca 💳", "Saldo reale attuale in conto."); }
+  function showDispDetail() { openModal("Disponibile 🏁", "Saldo + Stipendio - Spese Fisse."); }
+  function showSavDetail() { openModal("Risparmio 💎", "Fondo accumulato per vacanze."); }
+  function showVarieDetail() { openModal("Spese Varie 🛍️", "Margine per shopping e svago dopo aver tolto il risparmio fisso e le bollette."); }
 
   loadData();
 </script>
