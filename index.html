@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Executive Cashflow v81 - Test 1500€</title>
+  <title>Executive Cashflow v82 - Total Version</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -12,114 +12,210 @@
     }
     body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, system-ui, sans-serif; padding: 0.5rem; }
     .container { max-width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 0.8rem; }
-    .header-card { background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: white; padding: 1rem; border-radius: 1rem; text-align: center; }
-    .title { margin: 0; font-size: 0.9rem; font-weight: 800; text-transform: uppercase; }
+    
+    .header-card { background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: white; padding: 1.2rem; border-radius: 1rem; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .title { margin: 0; font-size: 0.9rem; letter-spacing: 0.5px; font-weight: 800; text-transform: uppercase; }
+
     .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
     .stat-card { background: var(--card); padding: 0.9rem; border-radius: 0.75rem; border: 1px solid var(--border); cursor: pointer; position: relative; }
     .stat-label { font-size: 0.55rem; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 3px; display: block; }
-    .stat-value { font-size: 1rem; font-weight: 800; }
+    .stat-value { font-size: 1.1rem; font-weight: 800; }
+    
     .full-width { grid-column: span 2; }
-    .border-banca { border-left: 4px solid var(--in); }
-    .border-disp { border-left: 4px solid var(--varie); }
-    .border-save { border-left: 4px solid var(--save); }
-    .border-cash { border-left: 4px solid var(--cash); background: #fffbeb; }
-    .card { background: var(--card); padding: 1rem; border-radius: 1rem; border: 1px solid var(--border); }
-    .section-title { margin: 0 0 0.8rem 0; font-size: 0.8rem; font-weight: 800; color: var(--accent); text-transform: uppercase; border-left: 3px solid var(--accent); padding-left: 6px; }
-    input, select, button { border-radius: 0.5rem; border: 1px solid var(--border); padding: 0.6rem; font-size: 0.85rem; width: 100%; margin-bottom: 0.4rem; }
-    button.primary { background: var(--accent); color: white; border: none; font-weight: 800; cursor: pointer; }
+    .border-banca { border-left: 5px solid var(--in); }
+    .border-disp { border-left: 5px solid var(--varie); }
+    .border-save { border-left: 5px solid var(--save); }
+    .border-cash { border-left: 5px solid var(--cash); background: #fffbeb; }
+    .border-week { border-left: 5px solid #64748b; background: #f1f5f9; }
+
+    .quick-actions { display: flex; gap: 4px; position: absolute; top: 6px; right: 6px; }
+    .btn-small { background: #fff; border: 1px solid var(--border); padding: 2px 6px; font-size: 0.6rem; border-radius: 4px; cursor: pointer; font-weight: 800; }
+    
+    #alertBanner { padding: 0.8rem; border-radius: 0.75rem; font-weight: 800; text-align: center; font-size: 0.8rem; border: 1px solid transparent; }
+    .alert-ok { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+    .alert-warn { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+
+    .card { background: var(--card); padding: 1.2rem; border-radius: 1rem; border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+    .section-title { margin: 0 0 1rem 0; font-size: 0.85rem; font-weight: 800; color: var(--accent); text-transform: uppercase; border-left: 4px solid var(--accent); padding-left: 8px; }
+
+    input, select, button { border-radius: 0.6rem; border: 1px solid var(--border); padding: 0.7rem; font-size: 0.9rem; width: 100%; margin-bottom: 0.5rem; box-sizing: border-box; }
+    button.primary { background: var(--accent); color: white; border: none; font-weight: 800; cursor: pointer; margin-top: 5px; }
+    
     .table { width: 100%; border-collapse: collapse; }
-    .table td { padding: 0.6rem 0.2rem; border-bottom: 1px solid var(--border); font-size: 0.75rem; }
+    .table td { padding: 0.8rem 0.2rem; border-bottom: 1px solid var(--border); font-size: 0.8rem; }
     .money.in { color: var(--in); font-weight: 700; }
     .money.out { color: var(--out); font-weight: 700; }
-    .modal { display: none; position: fixed; z-index: 1000; left:0; top:0; width:100%; height:100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
-    .modal-content { background: white; padding: 1.2rem; border-radius: 1rem; width: 90%; max-height: 85vh; overflow-y: auto; }
+
+    .modal { display: none; position: fixed; z-index: 1000; left:0; top:0; width:100%; height:100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); align-items: center; justify-content: center; }
+    .modal-content { background: white; padding: 1.5rem; border-radius: 1.2rem; width: 92%; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); }
+    
+    .btn-icon { background: none; border: none; cursor: pointer; font-size: 1rem; padding: 4px; border-radius: 6px; }
+    .btn-icon:hover { background: #f1f5f9; }
+    .edit-input { font-size: 0.8rem; padding: 5px; border: 1px solid var(--save); border-radius: 6px; width: 100%; box-sizing: border-box; }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <div class="header-card"><h1 class="title">Executive Cashflow v81</h1></div>
+  <div class="header-card">
+    <h1 class="title">Gestione Cashflow💵:<br>Risparmi e Tempo Libero</h1>
+  </div>
 
   <div class="stats-grid">
-    <div class="stat-card border-banca" onclick="showDetail('banca')"><span class="stat-label">SALDO REALE 💳</span><div id="actBal" class="stat-value">0 €</div></div>
-    <div class="stat-card border-disp" onclick="showDetail('disp')"><span class="stat-label">DISPONIBILE 🏁</span><div id="curBal" class="stat-value">0 €</div></div>
-    <div class="stat-card border-save" onclick="showDetail('save')"><span class="stat-label">RISPARMIO 💎</span><div id="savBal" class="stat-value">0 €</div></div>
-    <div class="stat-card border-cash" onclick="showDetail('cash')"><span class="stat-label">CONTANTE 💵</span><div id="cashBal" class="stat-value">0 €</div></div>
+    <div class="stat-card border-banca" onclick="showDetail('banca')">
+      <span class="stat-label">SALDO REALE 💳</span>
+      <div id="actBal" class="stat-value">0 €</div>
+    </div>
+    <div class="stat-card border-disp" onclick="showDetail('disp')">
+      <span class="stat-label">DISPONIBILE 🏁</span>
+      <div id="curBal" class="stat-value">0 €</div>
+    </div>
+    <div class="stat-card border-save" onclick="showDetail('save')">
+      <div class="quick-actions">
+        <button class="btn-small" onclick="event.stopPropagation(); manageFunds('save_in')">➕</button>
+        <button class="btn-small" onclick="event.stopPropagation(); manageFunds('save_out')">🔙</button>
+      </div>
+      <span class="stat-label">RISPARMIO 💎</span>
+      <div id="savBal" class="stat-value">0 €</div>
+    </div>
+    <div class="stat-card border-cash" onclick="showDetail('cash')">
+      <div class="quick-actions">
+          <button class="btn-small" onclick="event.stopPropagation(); manageFunds('cash_in')">➕</button>
+      </div>
+      <span class="stat-label">CONTANTE 💵</span>
+      <div id="cashBal" class="stat-value">0 €</div>
+    </div>
+    <div class="stat-card border-week full-width" onclick="showDetail('week')">
+      <span class="stat-label">SPESA SETTIMANALE CUMULATA 📊</span>
+      <div id="weekBal" class="stat-value">0 €</div>
+    </div>
+    <div class="stat-card full-width" style="border-left: 5px solid var(--varie); background: #fdf2ff;" onclick="showDetail('varie')">
+      <span class="stat-label">TARGET SHOPPING (MAX 500€/MESE) 🛍️</span>
+      <div id="varieBal" class="stat-value">0 €</div>
+      <div id="varieAdvice" style="font-size:0.6rem; margin-top:4px; font-weight:700"></div>
+    </div>
+  </div>
+
+  <div id="alertBanner"></div>
+
+  <div class="card">
+    <h2 class="section-title">Andamento vs Soglia 800€</h2>
+    <canvas id="balanceChart" height="200"></canvas>
   </div>
 
   <div class="card">
-    <h2 class="section-title">Test Inserimento (es. Regalo 1500)</h2>
+    <h2 class="section-title">Registra Movimento</h2>
     <form id="movForm">
       <input type="date" id="mDate" required>
-      <select id="mSource"><option value="banca">💳 Banca</option><option value="contanti">💵 Cassa</option></select>
-      <select id="mType"><option value="entrata">Entrata (+)</option><option value="uscita">Uscita (-)</option></select>
+      <div style="display:flex; gap:8px">
+        <select id="mSource"><option value="banca">💳 Banca</option><option value="contanti">💵 Cassa</option></select>
+        <select id="mType"><option value="uscita">Uscita (-)</option><option value="entrata">Entrata (+)</option></select>
+      </div>
+      <select id="mTag">
+          <option value="ordinaria">Spesa Comune / Alimentari</option>
+          <option value="svago">🛍️ Svago / Shopping</option>
+      </select>
       <input type="number" id="mAmt" step="0.01" placeholder="Importo €" required>
-      <input type="text" id="mCat" placeholder="Descrizione (es. Regalo)" required>
-      <button type="submit" class="primary">REGISTRA E VERIFICA</button>
+      <input type="text" id="mCat" placeholder="Descrizione (es. Regalo, Spesa...)" required>
+      <button type="submit" class="primary">SALVA MOVIMENTO</button>
     </form>
   </div>
 
   <div class="card">
-    <h2 class="section-title">Storico (Ultimi 20 movimenti)</h2>
+    <h2 class="section-title">Pianificazione Fisse</h2>
+    <form id="budForm">
+      <div style="display:flex; gap:8px">
+        <input type="date" id="bDate" required>
+        <input type="number" id="bAmt" step="0.01" placeholder="€" required>
+      </div>
+      <input type="text" id="bCat" placeholder="Nome Scadenza" required>
+      <button type="submit" class="primary">AGGIUNGI FISSA</button>
+    </form>
+    <div id="budList" style="margin-top:0.8rem"></div>
+  </div>
+
+  <div class="card">
+    <h2 class="section-title">Storico Completo</h2>
     <table class="table"><tbody id="rows"></tbody></table>
-    <div style="display:flex; gap:5px; margin-top:1rem">
-      <button onclick="exportData()" style="background:#eee; font-size:0.7rem; font-weight:700">BACKUP DATI</button>
-      <button onclick="document.getElementById('importFile').click()" style="background:#eee; font-size:0.7rem; font-weight:700">IMPORTA</button>
+    <div style="display:flex; gap:8px; margin-top:1.5rem">
+      <button onclick="exportData()" style="background:#eee; font-size:0.75rem; font-weight:700">BACKUP JSON</button>
+      <button onclick="document.getElementById('importFile').click()" style="background:#eee; font-size:0.75rem; font-weight:700">IMPORTA JSON</button>
     </div>
     <input type="file" id="importFile" style="display:none" onchange="importData(event)">
   </div>
 </div>
 
+<div id="detailModal" class="modal" onclick="closeModal()">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <h3 id="modalTitle" style="margin:0 0 1rem 0; color:var(--accent); border-bottom:1px solid #eee; padding-bottom:8px">Dettaglio</h3>
+    <div id="modalBody" style="font-size:0.85rem; line-height:1.6"></div>
+    <button onclick="closeModal()" style="margin-top:1.5rem; padding:12px; background:var(--accent); color:white; border:none; border-radius:10px; width:100%; font-weight:800">CHIUDI</button>
+  </div>
+</div>
+
 <script>
   const fmt = n => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
-  let state = { movs: [], buds: [], sBal: 0, stipendioBase: 3300, alertLimit: 800 };
+  const fmtDate = d => d.split('-').reverse().join('/');
 
-  function render() {
-    const todayStr = new Date().toISOString().slice(0,10);
+  let state = { movs: [], buds: [], sBal: 0, stipendioBase: 3300, alertLimit: 800 };
+  let editingId = null;
+  let editingBudId = null;
+  let chart;
+
+  function loadData() {
+    const saved = localStorage.getItem('bpm_v82');
+    if (saved) state = JSON.parse(saved);
+    render();
+  }
+  function saveData() { localStorage.setItem('bpm_v82', JSON.stringify(state)); }
+
+  function getCalculatedData() {
+    const today = new Date();
+    const todayStr = today.toISOString().slice(0,10);
+    const curMonth = todayStr.slice(0,7);
+    
     const bancaBal = state.movs.filter(m => m.date <= todayStr && m.source === 'banca').reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
     const cashBal = state.movs.filter(m => m.source === 'contanti' && m.date <= todayStr).reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
     
-    document.getElementById('actBal').textContent = fmt(bancaBal);
+    let fisseRes = 0;
+    let fisseMancanti = [];
+    state.buds.forEach(f => {
+      const pagata = state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.toLowerCase().includes(f.cat.toLowerCase()));
+      if(!pagata) { fisseRes += f.amt; fisseMancanti.push(f); }
+    });
+
+    const spesoSvago = state.movs.filter(m => m.date.slice(0,7) === curMonth && m.tag === 'svago').reduce((s,m) => s + m.amt, 0);
+    const weekAgo = new Date(); weekAgo.setDate(today.getDate() - 7);
+    const movsSettimana = state.movs.filter(m => m.date > weekAgo.toISOString().slice(0,10) && m.type === 'uscita');
+    const spesoSettimana = movsSettimana.reduce((s,m) => s + m.amt, 0);
+
+    return { bancaBal, cashBal, avail: bancaBal + state.stipendioBase - fisseRes, residuoSvago: 500 - spesoSvago, spesoSettimana, movsSettimana, fisseMancanti };
+  }
+
+  function render() {
+    const d = getCalculatedData();
+    document.getElementById('actBal').textContent = fmt(d.bancaBal);
+    document.getElementById('curBal').textContent = fmt(d.avail);
     document.getElementById('savBal').textContent = fmt(state.sBal);
-    document.getElementById('cashBal').textContent = fmt(cashBal);
+    document.getElementById('cashBal').textContent = fmt(d.cashBal);
+    document.getElementById('weekBal').textContent = fmt(d.spesoSettimana);
+    document.getElementById('varieBal').textContent = fmt(Math.max(0, d.residuoSvago));
 
-    const sorted = [...state.movs].sort((a,b) => new Date(b.date) - new Date(a.date));
-    document.getElementById('rows').innerHTML = sorted.slice(0,20).map((m) => `
-      <tr>
-        <td><small>${m.date}</small><br><b>${m.cat}</b></td>
-        <td style="text-align:right" class="money ${m.type}">${m.type==='entrata'?'+':'-'}${fmt(m.amt)}</td>
-      </tr>`).join('');
-    
-    localStorage.setItem('bpm_v81', JSON.stringify(state));
-  }
+    const adv = document.getElementById('varieAdvice');
+    adv.textContent = d.residuoSvago < 50 ? "⚠️ BUDGET QUASI ESAURITO" : "✅ SHOPPING POSSIBILE";
+    adv.style.color = d.residuoSvago < 50 ? "var(--out)" : "var(--varie)";
 
-  document.getElementById('movForm').onsubmit = e => {
-    e.preventDefault();
-    const newMov = {
-      date: document.getElementById('mDate').value,
-      source: document.getElementById('mSource').value,
-      type: document.getElementById('mType').value,
-      amt: Number(document.getElementById('mAmt').value),
-      cat: document.getElementById('mCat').value
-    };
-    state.movs.push(newMov);
-    render();
-    alert("Movimento registrato con successo! Ora è visibile nello storico.");
-    e.target.reset();
-  };
+    const banner = document.getElementById('alertBanner');
+    banner.style.display = 'block';
+    if(d.avail < 800) { banner.className = "alert-warn"; banner.textContent = `🚨 SOTTO SOGLIA SICUREZZA 800€: ${fmt(d.avail)}`; }
+    else { banner.className = "alert-ok"; banner.textContent = "✅ CUSCINETTO DI SICUREZZA OK"; }
 
-  function exportData() {
-    const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state));
-    a.download = 'cashflow_v81.json'; a.click();
-  }
-  function importData(e) {
-    const r = new FileReader(); r.onload = x => { state = JSON.parse(x.target.result); render(); };
-    r.readAsText(e.target.files[0]);
-  }
-
-  const saved = localStorage.getItem('bpm_v81');
-  if (saved) state = JSON.parse(saved);
-  render();
-</script>
-</body>
-</html>
+    // Lista Spese Fisse con Matita completa
+    document.getElementById('budList').innerHTML = state.buds.map((f, i) => {
+      const isEditing = editingBudId === i;
+      return `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:#fff1f2; border-radius:12px; margin-bottom:6px; border-left:4px solid var(--out)">
+        <div style="flex:1">
+            ${isEditing ? `<input type="date" id="eb-date-${i}" class="edit-input" value="${f.date}"><br><input type="text" id="eb-cat-${i}" class="edit-input" style="margin-top:4px" value="${f.cat}">` : `<small>${fmtDate(f.date)}</small><br><b>${f.cat}</b>`}
+        </div>
+        <div style="text-align:right">
+            ${isEditing ? `<input type="number" id="eb-amt-${i}" class="edit-input" value="${f.amt}">` : `
