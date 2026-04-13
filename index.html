@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Executive Cashflow v78 - Full Control</title>
+  <title>Executive Cashflow v79</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -16,9 +16,8 @@
     .header-card { background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: white; padding: 1rem; border-radius: 1rem; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
     .title { margin: 0; font-size: 0.9rem; letter-spacing: 0.5px; font-weight: 800; text-transform: uppercase; }
 
-    /* Layout Griglia Tabs */
     .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
-    .stat-card { background: var(--card); padding: 0.9rem; border-radius: 0.75rem; border: 1px solid var(--border); cursor: pointer; position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+    .stat-card { background: var(--card); padding: 0.9rem; border-radius: 0.75rem; border: 1px solid var(--border); cursor: pointer; position: relative; }
     .stat-label { font-size: 0.55rem; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 3px; display: block; }
     .stat-value { font-size: 1rem; font-weight: 800; }
     
@@ -29,6 +28,7 @@
     .border-cash { border-left: 4px solid var(--cash); background: #fffbeb; }
     .border-week { border-left: 4px solid #64748b; background: #f1f5f9; }
 
+    /* Fix posizionamento tasto + per leggibilità */
     .quick-actions { display: flex; gap: 4px; position: absolute; top: 6px; right: 6px; }
     .btn-small { background: #fff; border: 1px solid var(--border); padding: 2px 6px; font-size: 0.6rem; border-radius: 4px; cursor: pointer; font-weight: 800; }
     
@@ -39,7 +39,7 @@
     .card { background: var(--card); padding: 1rem; border-radius: 1rem; border: 1px solid var(--border); }
     .section-title { margin: 0 0 0.8rem 0; font-size: 0.8rem; font-weight: 800; color: var(--accent); text-transform: uppercase; border-left: 3px solid var(--accent); padding-left: 6px; }
 
-    input, select, button { border-radius: 0.5rem; border: 1px solid var(--border); padding: 0.6rem; font-size: 0.85rem; width: 100%; margin-bottom: 0.4rem; -webkit-appearance: none; }
+    input, select, button { border-radius: 0.5rem; border: 1px solid var(--border); padding: 0.6rem; font-size: 0.85rem; width: 100%; margin-bottom: 0.4rem; }
     button.primary { background: var(--accent); color: white; border: none; font-weight: 800; cursor: pointer; margin-top: 5px; }
     
     .table { width: 100%; border-collapse: collapse; }
@@ -51,7 +51,7 @@
     .modal-content { background: white; padding: 1.2rem; border-radius: 1rem; width: 90%; max-height: 85vh; overflow-y: auto; }
     
     .btn-icon { background: none; border: none; cursor: pointer; font-size: 0.9rem; padding: 2px; }
-    .edit-input { width: 65px; font-size: 0.75rem; padding: 2px; border: 1px solid var(--save); border-radius: 4px; text-align: right; }
+    .edit-input { font-size: 0.75rem; padding: 4px; border: 1px solid var(--save); border-radius: 4px; }
   </style>
 </head>
 <body>
@@ -79,7 +79,9 @@
       <div id="savBal" class="stat-value">0 €</div>
     </div>
     <div class="stat-card border-cash" onclick="showDetail('cash')">
-      <button class="btn-small" style="position:absolute; top:8px; right:8px;" onclick="event.stopPropagation(); manageFunds('cash_in')">➕</button>
+      <div class="quick-actions">
+          <button class="btn-small" onclick="event.stopPropagation(); manageFunds('cash_in')">➕</button>
+      </div>
       <span class="stat-label">CONTANTE 💵</span>
       <div id="cashBal" class="stat-value">0 €</div>
     </div>
@@ -127,14 +129,14 @@
         <input type="date" id="bDate" required>
         <input type="number" id="bAmt" step="0.01" placeholder="€" required>
       </div>
-      <input type="text" id="bCat" placeholder="Nome Scadenza (es. Mutuo)" required>
+      <input type="text" id="bCat" placeholder="Nome Scadenza" required>
       <button type="submit" class="primary">AGGIUNGI FISSA</button>
     </form>
     <div id="budList" style="margin-top:0.5rem"></div>
   </div>
 
   <div class="card">
-    <h2 class="section-title">Storico Operazioni</h2>
+    <h2 class="section-title">Storico</h2>
     <table class="table"><tbody id="rows"></tbody></table>
     <div style="display:flex; gap:5px; margin-top:1rem">
       <button onclick="exportData()" style="background:#eee; font-size:0.7rem; font-weight:700">BACKUP</button>
@@ -162,11 +164,11 @@
   let chart;
 
   function loadData() {
-    const saved = localStorage.getItem('bpm_v78');
+    const saved = localStorage.getItem('bpm_v79');
     if (saved) state = JSON.parse(saved);
     render();
   }
-  function saveData() { localStorage.setItem('bpm_v78', JSON.stringify(state)); }
+  function saveData() { localStorage.setItem('bpm_v79', JSON.stringify(state)); }
 
   function getCalculatedData() {
     const today = new Date();
@@ -211,12 +213,12 @@
     if(d.avail < 800) { banner.className = "alert-warn"; banner.textContent = `🚨 ALLERTA: Sotto soglia 800€ (${fmt(d.avail)})`; }
     else { banner.className = "alert-ok"; banner.textContent = "✅ CUSCINETTO DI SICUREZZA OK"; }
 
-    // Lista Spese Fisse con Matita
+    // Lista Spese Fisse con Matita (Data editabile)
     document.getElementById('budList').innerHTML = state.buds.map((f, i) => {
       const isEditing = editingBudId === i;
       return `<div style="display:flex; justify-content:space-between; align-items:center; padding:8px; background:#fff1f2; border-radius:8px; margin-bottom:4px; border-left:3px solid var(--out)">
         <div style="flex:1">
-            ${isEditing ? `<input type="text" id="eb-cat-${i}" class="edit-input" style="width:90px" value="${f.cat}">` : `<small>${fmtDate(f.date)}</small> <b>${f.cat}</b>`}
+            ${isEditing ? `<input type="date" id="eb-date-${i}" class="edit-input" style="width:110px" value="${f.date}"><br><input type="text" id="eb-cat-${i}" class="edit-input" style="width:110px; margin-top:4px" value="${f.cat}">` : `<small>${fmtDate(f.date)}</small><br><b>${f.cat}</b>`}
         </div>
         <div style="text-align:right">
             ${isEditing ? `<input type="number" id="eb-amt-${i}" class="edit-input" value="${f.amt}">` : `<b style="color:var(--out)">${fmt(f.amt)}</b>`}
@@ -226,15 +228,17 @@
       </div>`;
     }).join('');
 
-    // Storico con Matita
+    // Storico con Matita (Data editabile)
     const sorted = [...state.movs].sort((a,b) => new Date(b.date) - new Date(a.date));
     document.getElementById('rows').innerHTML = sorted.slice(0,10).map((m) => {
       const idx = state.movs.indexOf(m);
       const isEditing = editingId === idx;
       return `<tr>
-        <td><small>${fmtDate(m.date)}</small> ${m.source==='contanti'?'[C]':''}<br><b>${m.cat}</b></td>
+        <td>
+            ${isEditing ? `<input type="date" id="edit-date-${idx}" class="edit-input" value="${m.date}"><br><input type="text" id="edit-cat-${idx}" class="edit-input" style="margin-top:4px" value="${m.cat}">` : `<small>${fmtDate(m.date)}</small> ${m.source==='contanti'?'[C]':''}<br><b>${m.cat}</b>`}
+        </td>
         <td style="text-align:right" class="money ${m.type}">
-          ${isEditing ? `<input type="number" id="edit-${idx}" class="edit-input" value="${m.amt}">` : (m.type==='entrata'?'+':'-') + fmt(m.amt)}
+          ${isEditing ? `<input type="number" id="edit-amt-${idx}" class="edit-input" value="${m.amt}">` : (m.type==='entrata'?'+':'-') + fmt(m.amt)}
         </td>
         <td style="text-align:right">
           <button class="btn-icon" onclick="${isEditing ? `saveEdit(${idx})` : `toggleEdit(${idx})`}">${isEditing ? '💾' : '✏️'}</button>
@@ -245,6 +249,22 @@
 
     updateChart();
     saveData();
+  }
+
+  function toggleEdit(i) { editingId = (editingId === i) ? null : i; render(); }
+  function saveEdit(i) { 
+      state.movs[i].date = document.getElementById(`edit-date-${i}`).value;
+      state.movs[i].cat = document.getElementById(`edit-cat-${i}`).value;
+      state.movs[i].amt = Number(document.getElementById(`edit-amt-${i}`).value); 
+      editingId = null; render(); 
+  }
+  
+  function toggleEditBud(i) { editingBudId = (editingBudId === i) ? null : i; render(); }
+  function saveBud(i) { 
+      state.buds[i].date = document.getElementById(`eb-date-${i}`).value;
+      state.buds[i].cat = document.getElementById(`eb-cat-${i}`).value;
+      state.buds[i].amt = Number(document.getElementById(`eb-amt-${i}`).value);
+      editingBudId = null; render(); 
   }
 
   function showDetail(t) {
@@ -264,14 +284,6 @@
     document.getElementById('detailModal').style.display = 'flex';
   }
 
-  function toggleEdit(i) { editingId = (editingId === i) ? null : i; render(); }
-  function saveEdit(i) { state.movs[i].amt = Number(document.getElementById(`edit-${i}`).value); editingId = null; render(); }
-  function toggleEditBud(i) { editingBudId = (editingBudId === i) ? null : i; render(); }
-  function saveBud(i) { 
-      state.buds[i].cat = document.getElementById(`eb-cat-${i}`).value;
-      state.buds[i].amt = Number(document.getElementById(`eb-amt-${i}`).value);
-      editingBudId = null; render(); 
-  }
   function delM(i) { if(confirm("Eliminare movimento?")) { state.movs.splice(i,1); render(); } }
   function delB(i) { if(confirm("Eliminare scadenza?")) { state.buds.splice(i,1); render(); } }
 
@@ -320,7 +332,7 @@
   }
 
   function closeModal() { document.getElementById('detailModal').style.display='none'; }
-  function exportData() { const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'cashflow_v78.json'; a.click(); }
+  function exportData() { const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'cashflow_v79.json'; a.click(); }
   function importData(e) { const r = new FileReader(); r.onload = x => { state = JSON.parse(x.target.result); render(); }; r.readAsText(e.target.files[0]); }
 
   loadData();
