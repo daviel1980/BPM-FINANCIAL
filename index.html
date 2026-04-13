@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Executive Cashflow v77 - Mobile Optimized</title>
+  <title>Executive Cashflow v78 - Full Control</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -11,49 +11,47 @@
       --border: #e2e8f0; --text: #1e293b; --in: #10b981; --out: #ef4444; --save: #3b82f6; --cash: #f59e0b; --varie: #8b5cf6;
     }
     body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, system-ui, sans-serif; padding: 0.5rem; }
-    .container { max-width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem; }
+    .container { max-width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 0.8rem; }
     
-    /* Header compatta per cellulare */
     .header-card { background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: white; padding: 1rem; border-radius: 1rem; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-    .title { margin: 0; font-size: 1rem; letter-spacing: 0.5px; font-weight: 800; text-transform: uppercase; }
+    .title { margin: 0; font-size: 0.9rem; letter-spacing: 0.5px; font-weight: 800; text-transform: uppercase; }
 
-    /* Griglia Tabs ottimizzata per Mobile */
-    .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
-    .stat-card { background: var(--card); padding: 0.8rem; border-radius: 0.75rem; border: 1px solid var(--border); cursor: pointer; position: relative; }
-    .stat-label { font-size: 0.55rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 2px; display: block; }
+    /* Layout Griglia Tabs */
+    .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
+    .stat-card { background: var(--card); padding: 0.9rem; border-radius: 0.75rem; border: 1px solid var(--border); cursor: pointer; position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+    .stat-label { font-size: 0.55rem; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 3px; display: block; }
     .stat-value { font-size: 1rem; font-weight: 800; }
     
     .full-width { grid-column: span 2; }
     .border-banca { border-left: 4px solid var(--in); }
     .border-disp { border-left: 4px solid var(--varie); }
     .border-save { border-left: 4px solid var(--save); }
-    .border-cash { border-left: 4px solid var(--cash); }
-    .border-week { border-left: 4px solid #64748b; background: #f8fafc; }
+    .border-cash { border-left: 4px solid var(--cash); background: #fffbeb; }
+    .border-week { border-left: 4px solid #64748b; background: #f1f5f9; }
 
-    .quick-actions { display: flex; gap: 4px; position: absolute; top: 5px; right: 5px; }
-    .btn-small { background: #f1f5f9; border: 1px solid var(--border); padding: 2px 5px; font-size: 0.6rem; border-radius: 4px; cursor: pointer; }
+    .quick-actions { display: flex; gap: 4px; position: absolute; top: 6px; right: 6px; }
+    .btn-small { background: #fff; border: 1px solid var(--border); padding: 2px 6px; font-size: 0.6rem; border-radius: 4px; cursor: pointer; font-weight: 800; }
     
-    #alertBanner { padding: 0.7rem; border-radius: 0.75rem; font-weight: 700; text-align: center; font-size: 0.75rem; border: 1px solid transparent; }
+    #alertBanner { padding: 0.7rem; border-radius: 0.75rem; font-weight: 800; text-align: center; font-size: 0.75rem; border: 1px solid transparent; }
     .alert-ok { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
     .alert-warn { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
 
     .card { background: var(--card); padding: 1rem; border-radius: 1rem; border: 1px solid var(--border); }
-    .section-title { margin: 0 0 0.8rem 0; font-size: 0.85rem; font-weight: 800; color: var(--accent); text-transform: uppercase; border-left: 3px solid var(--accent); padding-left: 6px; }
+    .section-title { margin: 0 0 0.8rem 0; font-size: 0.8rem; font-weight: 800; color: var(--accent); text-transform: uppercase; border-left: 3px solid var(--accent); padding-left: 6px; }
 
-    input, select, button { border-radius: 0.5rem; border: 1px solid var(--border); padding: 0.6rem; font-size: 0.85rem; width: 100%; margin-bottom: 0.5rem; }
-    button.primary { background: var(--accent); color: white; border: none; font-weight: 700; cursor: pointer; }
+    input, select, button { border-radius: 0.5rem; border: 1px solid var(--border); padding: 0.6rem; font-size: 0.85rem; width: 100%; margin-bottom: 0.4rem; -webkit-appearance: none; }
+    button.primary { background: var(--accent); color: white; border: none; font-weight: 800; cursor: pointer; margin-top: 5px; }
     
     .table { width: 100%; border-collapse: collapse; }
-    .table td { padding: 0.7rem 0.3rem; border-bottom: 1px solid var(--border); font-size: 0.75rem; }
+    .table td { padding: 0.6rem 0.2rem; border-bottom: 1px solid var(--border); font-size: 0.75rem; }
     .money.in { color: var(--in); font-weight: 700; }
     .money.out { color: var(--out); font-weight: 700; }
 
-    /* Modal Styling */
-    .modal { display: none; position: fixed; z-index: 999; left:0; top:0; width:100%; height:100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px); align-items: center; justify-content: center; }
-    .modal-content { background: white; padding: 1.2rem; border-radius: 1rem; width: 92%; max-height: 80vh; overflow-y: auto; }
+    .modal { display: none; position: fixed; z-index: 1000; left:0; top:0; width:100%; height:100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(3px); align-items: center; justify-content: center; }
+    .modal-content { background: white; padding: 1.2rem; border-radius: 1rem; width: 90%; max-height: 85vh; overflow-y: auto; }
     
     .btn-icon { background: none; border: none; cursor: pointer; font-size: 0.9rem; padding: 2px; }
-    .edit-input { width: 60px; font-size: 0.75rem; padding: 2px; border: 1px solid var(--save); border-radius: 4px; }
+    .edit-input { width: 65px; font-size: 0.75rem; padding: 2px; border: 1px solid var(--save); border-radius: 4px; text-align: right; }
   </style>
 </head>
 <body>
@@ -114,11 +112,11 @@
       <select id="mTag">
           <option value="ordinaria">Spesa Comune</option>
           <option value="svago">🛍️ Svago/Shopping</option>
-          <option value="settimanale">📊 Spesa Settimanale (Cumulativa)</option>
+          <option value="settimanale">📊 Spesa Settimanale Cumulata</option>
       </select>
       <input type="number" id="mAmt" step="0.01" placeholder="Importo €" required>
       <input type="text" id="mCat" placeholder="Descrizione" required>
-      <button type="submit" class="primary">REGISTRA</button>
+      <button type="submit" class="primary">SALVA OPERAZIONE</button>
     </form>
   </div>
 
@@ -129,18 +127,18 @@
         <input type="date" id="bDate" required>
         <input type="number" id="bAmt" step="0.01" placeholder="€" required>
       </div>
-      <input type="text" id="bCat" placeholder="Nome Scadenza" required>
+      <input type="text" id="bCat" placeholder="Nome Scadenza (es. Mutuo)" required>
       <button type="submit" class="primary">AGGIUNGI FISSA</button>
     </form>
     <div id="budList" style="margin-top:0.5rem"></div>
   </div>
 
   <div class="card">
-    <h2 class="section-title">Storico</h2>
+    <h2 class="section-title">Storico Operazioni</h2>
     <table class="table"><tbody id="rows"></tbody></table>
     <div style="display:flex; gap:5px; margin-top:1rem">
-      <button onclick="exportData()" style="background:#eee; font-size:0.7rem">BACKUP</button>
-      <button onclick="document.getElementById('importFile').click()" style="background:#eee; font-size:0.7rem">IMPORTA</button>
+      <button onclick="exportData()" style="background:#eee; font-size:0.7rem; font-weight:700">BACKUP</button>
+      <button onclick="document.getElementById('importFile').click()" style="background:#eee; font-size:0.7rem; font-weight:700">IMPORTA</button>
     </div>
     <input type="file" id="importFile" style="display:none" onchange="importData(event)">
   </div>
@@ -148,9 +146,9 @@
 
 <div id="detailModal" class="modal" onclick="closeModal()">
   <div class="modal-content" onclick="event.stopPropagation()">
-    <h3 id="modalTitle" style="margin:0 0 1rem 0; color:var(--accent); font-size:1rem">Dettaglio</h3>
-    <div id="modalBody" style="font-size:0.8rem; line-height:1.5"></div>
-    <button onclick="closeModal()" style="margin-top:1rem">CHIUDI</button>
+    <h3 id="modalTitle" style="margin:0 0 1rem 0; color:var(--accent); font-size:1rem; border-bottom:1px solid #eee; padding-bottom:5px">Dettaglio</h3>
+    <div id="modalBody" style="font-size:0.8rem; line-height:1.6"></div>
+    <button onclick="closeModal()" style="margin-top:1rem; padding: 10px; background: var(--accent); color: white; border:none; border-radius: 8px; width:100%; font-weight:700">CHIUDI</button>
   </div>
 </div>
 
@@ -164,11 +162,11 @@
   let chart;
 
   function loadData() {
-    const saved = localStorage.getItem('bpm_v77');
+    const saved = localStorage.getItem('bpm_v78');
     if (saved) state = JSON.parse(saved);
     render();
   }
-  function saveData() { localStorage.setItem('bpm_v77', JSON.stringify(state)); }
+  function saveData() { localStorage.setItem('bpm_v78', JSON.stringify(state)); }
 
   function getCalculatedData() {
     const today = new Date();
@@ -210,15 +208,15 @@
 
     const banner = document.getElementById('alertBanner');
     banner.style.display = 'block';
-    if(d.avail < 800) { banner.className = "alert-warn"; banner.textContent = `🚨 SOGLIA 800€ A RISCHIO: ${fmt(d.avail)}`; }
-    else { banner.className = "alert-ok"; banner.textContent = "✅ CUSCINETTO SICURO"; }
+    if(d.avail < 800) { banner.className = "alert-warn"; banner.textContent = `🚨 ALLERTA: Sotto soglia 800€ (${fmt(d.avail)})`; }
+    else { banner.className = "alert-ok"; banner.textContent = "✅ CUSCINETTO DI SICUREZZA OK"; }
 
-    // Lista Spese Fisse con MATITA
+    // Lista Spese Fisse con Matita
     document.getElementById('budList').innerHTML = state.buds.map((f, i) => {
       const isEditing = editingBudId === i;
       return `<div style="display:flex; justify-content:space-between; align-items:center; padding:8px; background:#fff1f2; border-radius:8px; margin-bottom:4px; border-left:3px solid var(--out)">
         <div style="flex:1">
-            ${isEditing ? `<input type="text" id="eb-cat-${i}" class="edit-input" style="width:100px" value="${f.cat}">` : `<small>${fmtDate(f.date)}</small> <b>${f.cat}</b>`}
+            ${isEditing ? `<input type="text" id="eb-cat-${i}" class="edit-input" style="width:90px" value="${f.cat}">` : `<small>${fmtDate(f.date)}</small> <b>${f.cat}</b>`}
         </div>
         <div style="text-align:right">
             ${isEditing ? `<input type="number" id="eb-amt-${i}" class="edit-input" value="${f.amt}">` : `<b style="color:var(--out)">${fmt(f.amt)}</b>`}
@@ -228,7 +226,7 @@
       </div>`;
     }).join('');
 
-    // Storico Movimenti con MATITA
+    // Storico con Matita
     const sorted = [...state.movs].sort((a,b) => new Date(b.date) - new Date(a.date));
     document.getElementById('rows').innerHTML = sorted.slice(0,10).map((m) => {
       const idx = state.movs.indexOf(m);
@@ -252,32 +250,14 @@
   function showDetail(t) {
     const d = getCalculatedData();
     let title = "", body = "";
-    const filterMovs = (src) => state.movs.filter(m => m.source === src).sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
+    const getHist = (src) => state.movs.filter(m => m.source === src).sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5).map(m => `<div>${fmtDate(m.date)}: ${m.cat} <b>${fmt(m.amt)}</b></div>`).join('');
 
-    if(t==='banca') { 
-        title = "Saldo Reale Banca"; 
-        body = filterMovs('banca').map(m => `<div>${fmtDate(m.date)}: ${m.cat} <b>${fmt(m.amt)}</b></div>`).join('') || "Nessun movimento.";
-    }
-    if(t==='disp') { 
-        title = "Dettaglio Disponibile"; 
-        body = `Mancano: <br>` + d.fisseMancanti.map(f => `<div>- ${f.cat}: ${fmt(f.amt)}</div>`).join('') + `<hr>Base: ${fmt(d.bancaBal)} + Stipendio: ${fmt(state.stipendioBase)}`;
-    }
-    if(t==='save') { 
-        title = "Fondo Risparmio"; 
-        body = `Totale: <b>${fmt(state.sBal)}</b><br><br>Utilizza + per caricare e 🔙 per riportare in banca.`;
-    }
-    if(t==='cash') { 
-        title = "Cassa Contanti"; 
-        body = filterMovs('contanti').map(m => `<div>${fmtDate(m.date)}: ${m.cat} <b>${fmt(m.amt)}</b></div>`).join('') || "Nessun movimento.";
-    }
-    if(t==='week') { 
-        title = "Consolidato Settimana"; 
-        body = `Somma delle uscite registrate negli ultimi 7 giorni: <b>${fmt(d.spesoSettimana)}</b>.`;
-    }
-    if(t==='varie') { 
-        title = "Shopping & Svago"; 
-        body = `Budget mensile: 500€<br>Ancora spendibili: <b>${fmt(d.residuoSvago)}</b>.`;
-    }
+    if(t==='banca') { title = "Saldo Reale Banca"; body = `<b>Ultime 5 operazioni:</b><br>` + (getHist('banca') || "Nessun movimento."); }
+    if(t==='disp') { title = "Dettaglio Disponibile"; body = `<b>Fisse mancanti:</b><br>` + d.fisseMancanti.map(f => `<div>- ${f.cat}: ${fmt(f.amt)}</div>`).join('') + `<hr>Saldo attuale + Stipendio atteso.`; }
+    if(t==='save') { title = "Fondo Risparmio"; body = `Totale accantonato: <b>${fmt(state.sBal)}</b><br><br>Fondo per vacanze e obiettivi.`; }
+    if(t==='cash') { title = "Cassa Contanti"; body = `<b>Ultime 5 operazioni:</b><br>` + (getHist('contanti') || "Nessun movimento."); }
+    if(t==='week') { title = "Spese 7 Giorni"; body = `Uscite totali registrate nell'ultima settimana: <b>${fmt(d.spesoSettimana)}</b>.`; }
+    if(t==='varie') { title = "Shopping & Svago"; body = `Budget mensile: 500,00€<br>Ancora spendibili: <b>${fmt(d.residuoSvago)}</b>.`; }
     
     document.getElementById('modalTitle').innerHTML = title;
     document.getElementById('modalBody').innerHTML = body;
@@ -292,8 +272,8 @@
       state.buds[i].amt = Number(document.getElementById(`eb-amt-${i}`).value);
       editingBudId = null; render(); 
   }
-  function delM(i) { if(confirm("Eliminare?")) { state.movs.splice(i,1); render(); } }
-  function delB(i) { if(confirm("Eliminare?")) { state.buds.splice(i,1); render(); } }
+  function delM(i) { if(confirm("Eliminare movimento?")) { state.movs.splice(i,1); render(); } }
+  function delB(i) { if(confirm("Eliminare scadenza?")) { state.buds.splice(i,1); render(); } }
 
   function manageFunds(action) {
     let amt = Number(prompt("Importo:")); if(!amt) return;
@@ -340,7 +320,7 @@
   }
 
   function closeModal() { document.getElementById('detailModal').style.display='none'; }
-  function exportData() { const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'cashflow_v77.json'; a.click(); }
+  function exportData() { const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'cashflow_v78.json'; a.click(); }
   function importData(e) { const r = new FileReader(); r.onload = x => { state = JSON.parse(x.target.result); render(); }; r.readAsText(e.target.files[0]); }
 
   loadData();
