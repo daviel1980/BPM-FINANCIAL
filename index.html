@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Gestione Cashflow💵: Risparmi per vacanze e tempo libero</title>
+  <title>Executive Cashflow v93 - Full Control</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -77,32 +77,31 @@
 
   <div class="card">
     <h2 class="section-title">Andamento Giornaliero Proiettato</h2>
-    <div style="font-size: 0.6rem; color: #64748b; margin-bottom: 5px;">Proiezione saldo stimata fino a fine mese (Soglia 800€)</div>
     <canvas id="balanceChart" height="180"></canvas>
   </div>
 
   <div class="card">
     <h2 class="section-title">Nuova Registrazione</h2>
     <form id="movForm">
-      <input type="date" id="mDate" required>
-      <div style="display:flex; gap:8px"><select id="mSource"><option value="banca">💳 Banca</option><option value="contanti">💵 Cassa</option></select><select id="mType"><option value="uscita">Uscita</option><option value="entrata">Entrata</option></select></div>
+      <input type="date" id="mDate" required value="2026-04-15">
+      <div style="display:flex; gap:8px"><select id="mSource"><option value="banca">💳 Banca</option><option value="contanti">💵 Cassa</option></select><select id="mType"><option value="entrata">Entrata (+)</option><option value="uscita">Uscita (-)</option></select></div>
       <select id="mTag">
-          <option value="ordinaria">Spesa Comune / Fissa</option>
           <option value="stipendio">💰 Stipendio (15 o 30)</option>
           <option value="inps">🏛️ Entrata INPS</option>
+          <option value="ordinaria">Spesa Comune / Fissa</option>
           <option value="svago">🛍️ Svago / Shopping</option>
           <option value="settimanale">📊 Spesa Settimanale Cumulata</option>
       </select>
       <input type="number" id="mAmt" step="0.01" placeholder="Importo €" required>
-      <input type="text" id="mCat" placeholder="Descrizione (es. Stipendio, Enel...)" required>
+      <input type="text" id="mCat" placeholder="Descrizione (es. Stipendio 15/04)" required>
       <button type="submit" class="primary">REGISTRA MOVIMENTO</button>
     </form>
   </div>
 
   <div class="card">
     <h2 class="section-title">Pianificazione Fisse</h2>
-    <form id="budForm" style="display:flex; gap:5px"><input type="text" id="bCat" placeholder="Nome Spesa" required style="flex:2"><input type="number" id="bAmt" placeholder="€" required style="flex:1"><button type="submit" style="flex:1; background:var(--accent); color:white; border:none; border-radius:8px">+</button></form>
-    <div id="budList" style="margin-top:0.5rem"></div>
+    <form id="budForm" style="display:flex; gap:5px"><input type="text" id="bCat" placeholder="Nome" required style="flex:2"><input type="number" id="bAmt" placeholder="€" required style="flex:1"><button type="submit" style="flex:1; background:var(--accent); color:white; border:none; border-radius:8px">+</button></form>
+    <div id="budList" style="margin-top:0.8rem"></div>
   </div>
 
   <div class="card">
@@ -123,82 +122,49 @@
   const fmt = n => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
   const fmtDate = d => d.split('-').reverse().join('/');
   
-  // Parametri configurabili per proiezione
-  const CONFIG = {
-      stipendio15: 1650,
-      stipendio30: 1650,
-      inpsGiorno: 15,
-      inpsVal: 400
-  };
+  const CONFIG = { stipendio15: 1650, stipendio30: 1650, inpsGiorno: 15, inpsVal: 400 };
 
-  let state = { movs: [], buds: [], sBal: 0, stipendioBase: 3300, alertLimit: 800 };
-  let editingId = null; let chart;
+  let state = { movs: [], buds: [], sBal: 0, alertLimit: 800 };
+  let editingId = null; let editingBudId = null; let chart;
 
   function loadData() {
-    const saved = localStorage.getItem('bpm_v92');
+    const saved = localStorage.getItem('bpm_v93');
     if (saved) state = JSON.parse(saved);
     render();
   }
-  function saveData() { localStorage.setItem('bpm_v92', JSON.stringify(state)); }
+  function saveData() { localStorage.setItem('bpm_v93', JSON.stringify(state)); }
 
   function getCalculatedData() {
     const today = new Date();
     const todayStr = today.toISOString().slice(0,10);
     const curMonth = todayStr.slice(0,7);
+    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
     
-    // Saldo Reale ad oggi
     const bancaBal = state.movs.filter(m => m.date <= todayStr && m.source === 'banca').reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
     const cashBal = state.movs.filter(m => m.source === 'contanti' && m.date <= todayStr).reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
     
-    // PROIEZIONE GIORNALIERA
-    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
     let dailyProjection = [];
     let runningBalance = bancaBal;
 
     for (let d = today.getDate(); d <= lastDay; d++) {
         const dStr = curMonth + "-" + String(d).padStart(2, '0');
-        
-        // 1. Aggiungi entrate future registrate manualmente
-        const manualIn = state.movs.filter(m => m.date === dStr && m.date > todayStr && m.source === 'banca' && m.type === 'entrata').reduce((s,m)=>s+m.amt, 0);
-        runningBalance += manualIn;
+        runningBalance += state.movs.filter(m => m.date === dStr && m.date > todayStr && m.source === 'banca' && m.type === 'entrata').reduce((s,m)=>s+m.amt, 0);
+        runningBalance -= state.movs.filter(m => m.date === dStr && m.date > todayStr && m.source === 'banca' && m.type === 'uscita').reduce((s,m)=>s+m.amt, 0);
 
-        // 2. Sottrai uscite future registrate manualmente
-        const manualOut = state.movs.filter(m => m.date === dStr && m.date > todayStr && m.source === 'banca' && m.type === 'uscita').reduce((s,m)=>s+m.amt, 0);
-        runningBalance -= manualOut;
+        if (d === 15 && !state.movs.some(m => m.date.slice(0,7) === curMonth && m.date.includes('-15') && m.tag === 'stipendio')) runningBalance += CONFIG.stipendio15;
+        if (d === lastDay && !state.movs.some(m => m.date.slice(0,7) === curMonth && m.tag === 'stipendio' && (parseInt(m.date.slice(-2)) >= 28))) runningBalance += CONFIG.stipendio30;
+        if (d === CONFIG.inpsGiorno && !state.movs.some(m => m.date.slice(0,7) === curMonth && m.tag === 'inps')) runningBalance += CONFIG.inpsVal;
 
-        // 3. Proiezione Automatica Stipendi (se non ancora registrati)
-        if (d === 15 && !state.movs.some(m => m.date.slice(0,7) === curMonth && m.date.includes('-15') && m.tag === 'stipendio')) {
-            runningBalance += CONFIG.stipendio15;
-        }
-        if (d === lastDay && !state.movs.some(m => m.date.slice(0,7) === curMonth && m.tag === 'stipendio' && (m.date.includes('-30') || m.date.includes('-31')))) {
-            runningBalance += CONFIG.stipendio30;
-        }
-        if (d === CONFIG.inpsGiorno && !state.movs.some(m => m.date.slice(0,7) === curMonth && m.tag === 'inps')) {
-            runningBalance += CONFIG.inpsVal;
-        }
-
-        // 4. Sottrai Fisse Pianificate (se non ancora pagate)
         state.buds.forEach(f => {
-            // Se la fissa è prevista oggi e non c'è un movimento simile registrato nel mese
-            const pagata = state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.toLowerCase().includes(f.cat.toLowerCase()));
-            const fissaGiorno = new Date(f.date).getDate() || 1; // Fallback al giorno 1 se data non valida
-            if (d === fissaGiorno && !pagata) {
-                runningBalance -= f.amt;
-            }
+            const fissaPagata = state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.toLowerCase().includes(f.cat.toLowerCase()));
+            const fissaGiorno = new Date(f.date).getDate() || 1;
+            if (d === fissaGiorno && !fissaPagata) runningBalance -= f.amt;
         });
-
         dailyProjection.push({ day: d, balance: runningBalance });
     }
 
     const spesoSvago = state.movs.filter(m => m.date.slice(0,7) === curMonth && m.tag === 'svago').reduce((s,m) => s + m.amt, 0);
-    const finalAvail = dailyProjection.length > 0 ? dailyProjection[dailyProjection.length-1].balance : bancaBal;
-
-    return { 
-        bancaBal, cashBal, 
-        avail: finalAvail, 
-        residuoSvago: 500 - spesoSvago,
-        dailyProjection
-    };
+    return { bancaBal, cashBal, avail: dailyProjection.length > 0 ? dailyProjection[dailyProjection.length-1].balance : bancaBal, residuoSvago: 500 - spesoSvago, dailyProjection };
   }
 
   function render() {
@@ -212,121 +178,82 @@
     document.getElementById('varieBal').textContent = fmt(Math.max(0, d.residuoSvago));
     
     const banner = document.getElementById('alertBanner');
-    const minBal = Math.min(...d.dailyProjection.map(p => p.balance));
-    if(minBal < 800) {
-        banner.className = "alert-warn";
-        banner.textContent = `🚨 RISCHIO GAP: Saldo scenderà a ${fmt(minBal)} prima del prossimo bonifico.`;
-    } else {
-        banner.className = "alert-ok";
-        banner.textContent = "✅ PROIEZIONE STABILE (>800€)";
-    }
+    const minBal = d.dailyProjection.length > 0 ? Math.min(...d.dailyProjection.map(p => p.balance)) : d.bancaBal;
+    banner.className = minBal < 800 ? "alert-warn" : "alert-ok";
+    banner.textContent = minBal < 800 ? `🚨 GAP ALERT: Minimo previsto ${fmt(minBal)}` : "✅ PROIEZIONE STABILE";
 
-    // Storico con Matita (✏️)
+    // Fisse con MATITA
+    document.getElementById('budList').innerHTML = state.buds.map((f, i) => {
+      const isEditing = editingBudId === i;
+      return `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:#fff1f2; border-radius:12px; margin-bottom:6px; border-left:4px solid var(--out)">
+        <div style="flex:1">${isEditing ? `<input type="date" id="eb-date-${i}" class="edit-input" value="${f.date}"><input type="text" id="eb-cat-${i}" class="edit-input" style="margin-top:4px" value="${f.cat}">` : `<small>${fmtDate(f.date)}</small><br><b>${f.cat}</b>`}</div>
+        <div style="text-align:right">${isEditing ? `<input type="number" id="eb-amt-${i}" class="edit-input" value="${f.amt}">` : `<b style="color:var(--out)">${fmt(f.amt)}</b>`}<button class="btn-icon" onclick="${isEditing ? `saveBud(${i})` : `toggleEditBud(${i})`}">${isEditing ? '💾' : '✏️'}</button><button class="btn-icon" onclick="delBud(${i})">🗑️</button></div></div>`;
+    }).join('');
+
+    // Storico con MATITA
     const filtered = state.movs.filter(m => m.cat.toLowerCase().includes(query) || m.amt.toString().includes(query));
     const sorted = [...filtered].sort((a,b) => new Date(b.date) - new Date(a.date));
-    
     document.getElementById('rows').innerHTML = sorted.slice(0,15).map((m) => {
       const idx = state.movs.indexOf(m); const isEditing = editingId === idx;
       return `<tr><td>${isEditing ? `<input type="date" id="edit-date-${idx}" class="edit-input" value="${m.date}"><input type="text" id="edit-cat-${idx}" class="edit-input" style="margin-top:4px" value="${m.cat}">` : `<small>${fmtDate(m.date)}</small><br><b>${m.cat}</b>`}</td>
         <td style="text-align:right" class="money ${m.type}">${isEditing ? `<input type="number" id="edit-amt-${idx}" class="edit-input" value="${m.amt}">` : (m.type==='entrata'?'+':'-') + fmt(m.amt)}</td>
         <td style="text-align:right"><button class="btn-icon" onclick="${isEditing ? `saveEdit(${idx})` : `toggleEdit(${idx})`}">${isEditing ? '💾' : '✏️'}</button><button class="btn-icon" onclick="delM(${idx})">🗑️</button></td></tr>`;
     }).join('');
-
-    // Fisse
-    document.getElementById('budList').innerHTML = state.buds.map((b,i) => `<div style="display:flex; justify-content:space-between; font-size:0.8rem; padding:8px 0; border-bottom:1px solid #eee"><span>${b.cat}</span><b>${fmt(b.amt)}</b><button onclick="delBud(${i})" class="btn-icon">🗑️</button></div>`).join('');
-
     updateChart(d.dailyProjection); saveData();
   }
+
+  function toggleEdit(i) { editingId = (editingId === i) ? null : i; render(); }
+  function saveEdit(i) { state.movs[i].date = document.getElementById(`edit-date-${i}`).value; state.movs[i].cat = document.getElementById(`edit-cat-${i}`).value; state.movs[i].amt = Number(document.getElementById(`edit-amt-${i}`).value); editingId = null; render(); }
+  function toggleEditBud(i) { editingBudId = (editingBudId === i) ? null : i; render(); }
+  function saveBud(i) { state.buds[i].date = document.getElementById(`eb-date-${i}`).value; state.buds[i].cat = document.getElementById(`eb-cat-${i}`).value; state.buds[i].amt = Number(document.getElementById(`eb-amt-${i}`).value); editingBudId = null; render(); }
 
   function updateChart(projection) {
     const ctx = document.getElementById('balanceChart').getContext('2d');
     if(chart) chart.destroy();
-    
-    const labels = projection.map(p => p.day);
-    const data = projection.map(p => p.balance);
-
     chart = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: labels,
-            datasets: [{
-                label: 'Saldo Proiettato',
-                data: data,
-                borderColor: '#01696f',
-                backgroundColor: 'rgba(1, 105, 92, 0.05)',
-                fill: true,
-                tension: 0.3,
-                pointRadius: 2
-            }, {
-                label: 'Soglia 800€',
-                data: Array(labels.length).fill(800),
-                borderColor: 'red',
-                borderDash: [5,5],
-                pointRadius: 0
-            }]
+            labels: projection.map(p => p.day),
+            datasets: [{ data: projection.map(p => p.balance), borderColor: '#01696f', fill: true, backgroundColor: 'rgba(1, 105, 92, 0.05)', tension: 0.3 }, { data: Array(projection.length).fill(800), borderColor: 'red', borderDash: [5,5], pointRadius: 0 }]
         },
-        options: { 
-            responsive: true, 
-            plugins: { legend: { display: false } },
-            scales: { x: { title: { display: true, text: 'Giorno del mese', font: { size: 10 } } } }
-        }
+        options: { responsive: true, plugins: { legend: { display: false } } }
     });
-  }
-
-  function toggleEdit(i) { editingId = (editingId === i) ? null : i; render(); }
-  function saveEdit(i) { 
-    state.movs[i].date = document.getElementById(`edit-date-${i}`).value; 
-    state.movs[i].cat = document.getElementById(`edit-cat-${i}`).value; 
-    state.movs[i].amt = Number(document.getElementById(`edit-amt-${i}`).value); 
-    editingId = null; render(); 
-  }
-
-  function manageFunds(action) {
-    let amt = Number(prompt("Importo:")); if(!amt) return; const dStr = new Date().toISOString().slice(0,10);
-    if(action==='save_in') { state.sBal += amt; state.movs.push({date:dStr, source:'banca', type:'uscita', amt, cat:"💎 Risparmio", tag:"ordinaria"}); }
-    else if(action==='save_out') { state.sBal -= amt; state.movs.push({date:dStr, source:'banca', type:'entrata', amt, cat:"🔙 Revoca Risparmio", tag:"ordinaria"}); }
-    else if(action==='cash_in') { state.movs.push({date:dStr, source:'banca', type:'uscita', amt, cat:"🏧 Prelievo", tag:"ordinaria"}); state.movs.push({date:dStr, source:'contanti', type:'entrata', amt, cat:"💵 Carico Cassa", tag:"ordinaria"}); }
-    render();
   }
 
   document.getElementById('movForm').onsubmit = e => {
     e.preventDefault();
-    state.movs.push({ 
-        date: document.getElementById('mDate').value, 
-        source: document.getElementById('mSource').value, 
-        type: document.getElementById('mType').value, 
-        tag: document.getElementById('mTag').value,
-        amt: Number(document.getElementById('mAmt').value), 
-        cat: document.getElementById('mCat').value 
-    });
+    state.movs.push({ date: document.getElementById('mDate').value, source: document.getElementById('mSource').value, type: document.getElementById('mType').value, amt: Number(document.getElementById('mAmt').value), tag: document.getElementById('mTag').value, cat: document.getElementById('mCat').value });
     render(); e.target.reset();
   };
-
   document.getElementById('budForm').onsubmit = e => {
     e.preventDefault();
-    // Chiedi il giorno del mese per la scadenza
-    const giorno = prompt("In quale giorno del mese scade solitamente? (1-31)", "1");
-    const mockDate = new Date(); mockDate.setDate(parseInt(giorno));
-    state.buds.push({ 
-        cat: document.getElementById('bCat').value, 
-        amt: Number(document.getElementById('bAmt').value),
-        date: mockDate.toISOString().slice(0,10)
-    });
+    const g = prompt("Giorno del mese scadenza (1-31):", "15");
+    const d = new Date(); d.setDate(parseInt(g));
+    state.buds.push({ cat: document.getElementById('bCat').value, amt: Number(document.getElementById('bAmt').value), date: d.toISOString().slice(0,10) });
     render(); e.target.reset();
   };
 
   function delM(i) { if(confirm("Eliminare?")) { state.movs.splice(i,1); render(); } }
-  function delBud(i) { state.buds.splice(i,1); render(); }
+  function delBud(i) { if(confirm("Eliminare?")) { state.buds.splice(i,1); render(); } }
+  function manageFunds(action) {
+    let amt = Number(prompt("Importo:")); if(!amt) return; const dStr = new Date().toISOString().slice(0,10);
+    if(action==='save_in') { state.sBal += amt; state.movs.push({date:dStr, source:'banca', type:'uscita', amt, cat:"💎 Risparmio", tag:"ordinaria"}); }
+    else if(action==='save_out') { state.sBal -= amt; state.movs.push({date:dStr, source:'banca', type:'entrata', amt, cat:"🔙 Revoca Risparmio", tag:"ordinaria"}); }
+    else { state.movs.push({date:dStr, source:'banca', type:'uscita', amt, cat:"🏧 Prelievo", tag:"ordinaria"}); state.movs.push({date:dStr, source:'contanti', type:'entrata', amt, cat:"💵 Carico Cassa", tag:"ordinaria"}); }
+    render();
+  }
 
   function showDetail(t) {
     const d = getCalculatedData(); let title = "", body = "";
-    if(t==='banca') { title = "Saldo Reale"; body = "Il denaro effettivamente presente in banca oggi."; }
-    if(t==='gap') { title = "Proiezione Fine Mese"; body = `Basata sul saldo attuale + stipendi previsti (15 e 30) e sottraendo le scadenze fisse non ancora pagate.`; }
-    if(t==='varie') { title = "Target Svago"; body = `Budget Shopping mensile: 500€.<br>Rimanente: <b>${fmt(d.residuoSvago)}</b>.`; }
-    document.getElementById('modalTitle').innerHTML = title; document.getElementById('modalBody').innerHTML = body; document.getElementById('detailModal').style.display = 'flex';
+    if(t==='banca') title = "Saldo Reale";
+    if(t==='gap') title = "Proiezione Fine Mese";
+    if(t==='varie') title = "Target Svago";
+    document.getElementById('modalTitle').innerHTML = title; 
+    document.getElementById('modalBody').innerHTML = "Dettaglio calcolato al " + new Date().toLocaleDateString();
+    document.getElementById('detailModal').style.display = 'flex';
   }
 
-  function exportData() { const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'cashflow_v92.json'; a.click(); }
+  function exportData() { const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'executive_cashflow_v93.json'; a.click(); }
   function importData(e) { const r = new FileReader(); r.onload = x => { state = JSON.parse(x.target.result); render(); }; r.readAsText(e.target.files[0]); }
   function closeModal() { document.getElementById('detailModal').style.display='none'; }
   loadData();
