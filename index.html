@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Executive Cashflow v87</title>
+  <title>Executive Cashflow v89 - Gap Analyzer</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
-      --bg: #f8fafc; --card: #ffffff; --accent: #01696f; --accent-dark: #004d40;
+      --bg: #f1f5f9; --card: #ffffff; --accent: #01696f; --accent-dark: #004d40;
       --border: #e2e8f0; --text: #1e293b; --in: #10b981; --out: #ef4444; --save: #3b82f6; --cash: #f59e0b; --varie: #8b5cf6;
     }
     body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; padding: 0.5rem; }
@@ -16,229 +16,262 @@
     .title { margin: 0; font-size: 0.9rem; font-weight: 800; text-transform: uppercase; }
 
     .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
-    .stat-card { background: var(--card); padding: 0.9rem; border-radius: 0.75rem; border: 1px solid var(--border); cursor: pointer; position: relative; }
+    .stat-card { background: var(--card); padding: 0.9rem; border-radius: 0.75rem; border: 1px solid var(--border); cursor: pointer; transition: 0.2s; }
     .stat-label { font-size: 0.55rem; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 3px; display: block; }
     .stat-value { font-size: 1.1rem; font-weight: 800; }
     
-    .full-width { grid-column: span 2; }
     .border-banca { border-left: 5px solid var(--in); }
-    .border-disp { border-left: 5px solid var(--varie); }
+    .border-disp { border-left: 5px solid var(--varie); border-right: 5px solid var(--varie); background: #fdf2ff; }
     .border-save { border-left: 5px solid var(--save); }
-    .border-cash { border-left: 5px solid var(--cash); background: #fffbeb; }
-    .border-week { border-left: 5px solid #64748b; background: #f1f5f9; }
+    .border-cash { border-left: 5px solid var(--cash); }
 
-    .quick-actions { display: flex; gap: 4px; position: absolute; top: 6px; right: 6px; }
-    .btn-small { background: #fff; border: 1px solid var(--border); padding: 2px 6px; font-size: 0.6rem; border-radius: 4px; cursor: pointer; font-weight: 800; }
-    
-    #alertBanner { padding: 0.8rem; border-radius: 0.75rem; font-weight: 800; text-align: center; font-size: 0.8rem; }
-    .alert-ok { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
-    .alert-warn { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .alert-banner { padding: 0.8rem; border-radius: 0.75rem; font-weight: 800; text-align: center; font-size: 0.75rem; border: 1px solid transparent; }
+    .alert-ok { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+    .alert-warn { background: #fff7ed; color: #9a3412; border-color: #fed7aa; }
+    .alert-danger { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
 
     .card { background: var(--card); padding: 1.2rem; border-radius: 1rem; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-    .section-title { margin: 0 0 1rem 0; font-size: 0.85rem; font-weight: 800; color: var(--accent); text-transform: uppercase; border-left: 4px solid var(--accent); padding-left: 8px; }
+    .section-title { margin: 0 0 1rem 0; font-size: 0.8rem; font-weight: 800; color: var(--accent); text-transform: uppercase; display: flex; justify-content: space-between; }
 
     input, select, button { border-radius: 0.6rem; border: 1px solid var(--border); padding: 0.7rem; font-size: 0.9rem; width: 100%; margin-bottom: 0.5rem; box-sizing: border-box; }
-    button.primary { background: var(--accent); color: white; border: none; font-weight: 800; cursor: pointer; margin-top: 5px; }
+    button.primary { background: var(--accent); color: white; border: none; font-weight: 800; cursor: pointer; }
     
     .table { width: 100%; border-collapse: collapse; }
     .table td { padding: 0.8rem 0.2rem; border-bottom: 1px solid var(--border); font-size: 0.8rem; }
     .money.in { color: var(--in); font-weight: 700; }
     .money.out { color: var(--out); font-weight: 700; }
 
-    .modal { display: none; position: fixed; z-index: 1000; left:0; top:0; width:100%; height:100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-    .modal-content { background: white; padding: 1.5rem; border-radius: 1.2rem; width: 92%; max-height: 85vh; overflow-y: auto; }
-    .btn-icon { background: none; border: none; cursor: pointer; font-size: 1rem; padding: 4px; border-radius: 6px; }
-    .edit-input { font-size: 0.8rem; padding: 5px; border: 1px solid var(--save); border-radius: 6px; width: 100%; box-sizing: border-box; }
+    .modal { display: none; position: fixed; z-index: 1000; left:0; top:0; width:100%; height:100%; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+    .modal-content { background: white; padding: 1.5rem; border-radius: 1.2rem; width: 90%; max-height: 80vh; overflow-y: auto; }
+    .btn-icon { background: none; border: none; cursor: pointer; font-size: 1rem; }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <div class="header-card"><h1 class="title">Gestione Cashflow💵:<br>Risparmi e Tempo Libero</h1></div>
+  <div class="header-card"><h1 class="title">Cashflow Analyzer v89:<br>Monitoraggio Gap Stipendi</h1></div>
 
   <div class="stats-grid">
-    <div class="stat-card border-banca" onclick="showDetail('banca')"><span class="stat-label">SALDO REALE 💳</span><div id="actBal" class="stat-value">0 €</div></div>
-    <div class="stat-card border-disp" onclick="showDetail('disp')"><span class="stat-label">DISPONIBILE 🏁</span><div id="curBal" class="stat-value">0 €</div></div>
-    <div class="stat-card border-save" onclick="showDetail('save')">
-      <div class="quick-actions"><button class="btn-small" onclick="event.stopPropagation(); manageFunds('save_in')">➕</button><button class="btn-small" onclick="event.stopPropagation(); manageFunds('save_out')">🔙</button></div>
-      <span class="stat-label">RISPARMIO 💎</span><div id="savBal" class="stat-value">0 €</div>
-    </div>
-    <div class="stat-card border-cash" onclick="showDetail('cash')">
-      <div class="quick-actions"><button class="btn-small" onclick="event.stopPropagation(); manageFunds('cash_in')">➕</button></div>
-      <span class="stat-label">CONTANTE 💵</span><div id="cashBal" class="stat-value">0 €</div>
-    </div>
-    <div class="stat-card border-week full-width" onclick="showDetail('week')"><span class="stat-label">SPESA SETTIMANALE CUMULATA 📊</span><div id="weekBal" class="stat-value">0 €</div></div>
-    <div class="stat-card full-width" style="border-left: 5px solid var(--varie); background: #fdf2ff;" onclick="showDetail('varie')">
-      <span class="stat-label">TARGET SHOPPING (500€/MESE) 🛍️</span><div id="varieBal" class="stat-value">0 €</div>
-      <div id="varieAdvice" style="font-size:0.6rem; margin-top:4px; font-weight:700"></div>
+    <div class="stat-card border-banca" onclick="showDetail('banca')"><span class="stat-label">SALDO ATTUALE 💳</span><div id="actBal" class="stat-value">0 €</div></div>
+    <div class="stat-card border-disp" onclick="showDetail('gap')"><span class="stat-label">GAP DISPONIBILE ⚡</span><div id="curBal" class="stat-value">0 €</div></div>
+    <div class="stat-card border-save" onclick="manageFunds('save_in')"><span class="stat-label">RISPARMIO 💎</span><div id="savBal" class="stat-value">0 €</div></div>
+    <div class="stat-card border-cash" onclick="manageFunds('cash_in')"><span class="stat-label">CONTANTE 💵</span><div id="cashBal" class="stat-value">0 €</div></div>
+  </div>
+
+  <div id="gapAlert" class="alert-banner"></div>
+
+  <div class="card">
+    <div class="section-title"><span>Proiezione Mensile (Gap 15-30)</span><span id="chartStatus" style="font-size:0.6rem"></span></div>
+    <canvas id="balanceChart" height="180"></canvas>
+  </div>
+
+  <div class="card">
+    <h2 class="section-title">Budget Svago & Tempo Libero</h2>
+    <div style="background: #f8fafc; padding: 10px; border-radius: 10px; border: 1px solid var(--border)">
+        <div style="display:flex; justify-content:space-between; margin-bottom:5px">
+            <span style="font-size:0.7rem; font-weight:700">Residuo Mese</span>
+            <span id="svagoRes" style="font-weight:800; color:var(--varie)">0 €</span>
+        </div>
+        <div style="width:100%; background:#e2e8f0; height:8px; border-radius:4px overflow:hidden">
+            <div id="svagoBar" style="height:100%; background:var(--varie); width:0%; border-radius:4px transition:0.5s"></div>
+        </div>
+        <div id="svagoAdvice" style="font-size:0.6rem; margin-top:8px; color:#64748b; font-style:italic"></div>
     </div>
   </div>
 
-  <div id="alertBanner"></div>
-
-  <div class="card"><h2 class="section-title">Andamento vs Soglia 800€</h2><canvas id="balanceChart" height="180"></canvas></div>
-
   <div class="card">
-    <h2 class="section-title">Nuova Registrazione</h2>
+    <h2 class="section-title">Registra Movimento / Stipendio</h2>
     <form id="movForm">
       <input type="date" id="mDate" required>
       <div style="display:flex; gap:8px"><select id="mSource"><option value="banca">💳 Banca</option><option value="contanti">💵 Cassa</option></select><select id="mType"><option value="uscita">Uscita</option><option value="entrata">Entrata</option></select></div>
       <select id="mTag">
-          <option value="ordinaria">Spesa Comune / Stipendio</option>
-          <option value="svago">🛍️ Svago / Shopping</option>
-          <option value="settimanale">📊 Spesa Settimanale Cumulata</option>
+          <option value="ordinaria">Spesa Fissa / Bolletta</option>
+          <option value="stipendio">💰 Stipendio / Entrata</option>
+          <option value="svago">🍹 Tempo Libero / Svago</option>
       </select>
       <input type="number" id="mAmt" step="0.01" placeholder="Importo €" required>
-      <input type="text" id="mCat" placeholder="Descrizione (Stipendio, Enel, Jeans...)" required>
-      <button type="submit" class="primary">SALVA MOVIMENTO</button>
+      <input type="text" id="mCat" placeholder="Descrizione" required>
+      <button type="submit" class="primary">AGGIORNA SALDO</button>
     </form>
   </div>
 
   <div class="card">
-    <h2 class="section-title">Pianificazione Fisse</h2>
-    <form id="budForm"><div style="display:flex; gap:8px"><input type="date" id="bDate" required><input type="number" id="bAmt" step="0.01" placeholder="€" required></div><input type="text" id="bCat" placeholder="Nome Scadenza" required><button type="submit" class="primary">AGGIUNGI FISSA</button></form>
-    <div id="budList" style="margin-top:0.8rem"></div>
+    <h2 class="section-title">Scadenze Fisse</h2>
+    <form id="budForm" style="display:flex; gap:5px"><input type="text" id="bCat" placeholder="Nome" required style="flex:2"><input type="number" id="bAmt" placeholder="€" required style="flex:1"><button type="submit" style="flex:1; background:var(--accent); color:white; border:none; border-radius:8px">+</button></form>
+    <div id="budList" style="margin-top:0.5rem"></div>
   </div>
 
   <div class="card">
-    <h2 class="section-title">Storico & Ricerca</h2>
-    <input type="text" id="searchInput" placeholder="Cerca movimento..." onkeyup="render()" style="margin-bottom:1rem">
+    <h2 class="section-title">Storico Recente</h2>
     <table class="table"><tbody id="rows"></tbody></table>
-    <div style="display:flex; gap:8px; margin-top:1.5rem">
-      <button onclick="exportData()" style="background:#eee; font-size:0.75rem; font-weight:700">BACKUP</button>
-      <button onclick="document.getElementById('importFile').click()" style="background:#eee; font-size:0.75rem; font-weight:700">IMPORTA</button>
-    </div>
-    <input type="file" id="importFile" style="display:none" onchange="importData(event)">
+    <button onclick="exportData()" style="margin-top:1rem; background:none; border:1px solid #ccc; font-size:0.7rem; padding:5px">Scarica Backup</button>
   </div>
 </div>
 
-<div id="detailModal" class="modal" onclick="closeModal()"><div class="modal-content" onclick="event.stopPropagation()"><h3 id="modalTitle" style="margin:0 0 1rem 0; color:var(--accent); border-bottom:1px solid #eee; padding-bottom:8px">Dettaglio</h3><div id="modalBody" style="font-size:0.85rem; line-height:1.6"></div><button onclick="closeModal()" style="margin-top:1.5rem; padding:12px; background:var(--accent); color:white; border:none; border-radius:10px; width:100%; font-weight:800">CHIUDI</button></div></div>
+<div id="detailModal" class="modal" onclick="closeModal()"><div class="modal-content" onclick="event.stopPropagation()"><h3 id="modalTitle"></h3><div id="modalBody"></div><button onclick="closeModal()" class="primary" style="margin-top:1rem">OK</button></div></div>
 
 <script>
   const fmt = n => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
-  const fmtDate = d => d.split('-').reverse().join('/');
-  let state = { movs: [], buds: [], sBal: 0, stipendioBase: 3300, alertLimit: 800 };
-  let editingId = null; let editingBudId = null; let chart;
+  const today = () => new Date().toISOString().slice(0,10);
+  
+  let state = { movs: [], buds: [], sBal: 0, budgetSvago: 500 };
 
-  function loadData() {
-    const saved = localStorage.getItem('bpm_v87');
-    if (saved) state = JSON.parse(saved);
+  function load() {
+    const s = localStorage.getItem('bpm_v89');
+    if(s) state = JSON.parse(s);
     render();
-  }
-  function saveData() { localStorage.setItem('bpm_v87', JSON.stringify(state)); }
-
-  function getCalculatedData() {
-    const todayStr = new Date().toISOString().slice(0,10);
-    const curMonth = todayStr.slice(0,7);
-    
-    const bancaBal = state.movs.filter(m => m.date <= todayStr && m.source === 'banca').reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
-    const cashBal = state.movs.filter(m => m.source === 'contanti' && m.date <= todayStr).reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
-    
-    // Logica Stipendi Dinamici
-    const stipendioEffettivo = state.movs.filter(m => m.date.slice(0,7) === curMonth && m.cat.toLowerCase().includes('stipendio') && m.type === 'entrata').reduce((s,m)=>s+m.amt, 0);
-    const entrateFutureReali = state.movs.filter(m => m.date > todayStr && m.date.slice(0,7) === curMonth && m.source === 'banca' && m.type === 'entrata' && !m.cat.toLowerCase().includes('stipendio')).reduce((s, m) => s + m.amt, 0);
-    const stipendioDaUsare = stipendioEffettivo > 0 ? stipendioEffettivo : state.stipendioBase;
-
-    let fisseRes = 0; let fisseMancanti = [];
-    state.buds.forEach(f => {
-      const pagata = state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.toLowerCase().includes(f.cat.toLowerCase()));
-      if(!pagata) { fisseRes += f.amt; fisseMancanti.push(f); }
-    });
-
-    const spesoSvago = state.movs.filter(m => m.date.slice(0,7) === curMonth && m.tag === 'svago').reduce((s,m) => s + m.amt, 0);
-    const weekAgo = new Date(); weekAgo.setDate(new Date().getDate() - 7);
-    const weekAgoStr = weekAgo.toISOString().slice(0,10);
-    const movsSettimana = state.movs.filter(m => m.date > weekAgoStr && m.type === 'uscita');
-
-    return { bancaBal, cashBal, avail: bancaBal + (stipendioEffettivo > 0 ? 0 : state.stipendioBase) + entrateFutureReali - fisseRes, residuoSvago: 500 - spesoSvago, spesoSettimana: movsSettimana.reduce((s,m)=>s+m.amt,0), movsSettimana, fisseMancanti };
   }
 
   function render() {
-    const d = getCalculatedData();
-    const query = document.getElementById('searchInput').value.toLowerCase();
+    const now = today();
+    const curMonth = now.slice(0,7);
     
-    document.getElementById('actBal').textContent = fmt(d.bancaBal);
-    document.getElementById('curBal').textContent = fmt(d.avail);
+    // Calcolo Saldo Reale
+    const bancaBal = state.movs.filter(m => m.date <= now && m.source === 'banca').reduce((s,m) => s + (m.type==='entrata'?m.amt:-m.amt), 0);
+    const cashBal = state.movs.filter(m => m.source === 'contanti' && m.date <= now).reduce((s,m) => s + (m.type==='entrata'?m.amt:-m.amt), 0);
+    
+    // Calcolo Svago
+    const spesoSvago = state.movs.filter(m => m.date.slice(0,7) === curMonth && m.tag === 'svago').reduce((s,m) => s + m.amt, 0);
+    const residuoSvago = state.budgetSvago - spesoSvago;
+    
+    // Logica Gap Stipendi (15 e 30)
+    const stipendiPresunti = [];
+    if (!state.movs.some(m => m.date.slice(0,7) === curMonth && m.date.includes('-15'))) stipendiPresunti.push({date: curMonth+'-15', amt: 1650});
+    if (!state.movs.some(m => m.date.slice(0,7) === curMonth && m.date.includes('-30'))) stipendiPresunti.push({date: curMonth+'-30', amt: 1650});
+
+    const fisseMancanti = state.buds.filter(b => !state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.toLowerCase().includes(b.cat.toLowerCase())));
+    const fisseTotal = fisseMancanti.reduce((s,b) => s + b.amt, 0);
+
+    const disponibile = bancaBal + stipendiPresunti.reduce((s,m)=>s+m.amt,0) - fisseTotal;
+
+    // UI Updates
+    document.getElementById('actBal').textContent = fmt(bancaBal);
+    document.getElementById('curBal').textContent = fmt(disponibile);
     document.getElementById('savBal').textContent = fmt(state.sBal);
-    document.getElementById('cashBal').textContent = fmt(d.cashBal);
-    document.getElementById('weekBal').textContent = fmt(d.spesoSettimana);
-    document.getElementById('varieBal').textContent = fmt(Math.max(0, d.residuoSvago));
+    document.getElementById('cashBal').textContent = fmt(cashBal);
     
-    const banner = document.getElementById('alertBanner');
-    banner.className = d.avail < 800 ? "alert-warn" : "alert-ok";
-    banner.textContent = d.avail < 800 ? `🚨 SOTTO SOGLIA: ${fmt(d.avail)}` : "✅ SITUAZIONE STABILE (>800€)";
+    const banner = document.getElementById('gapAlert');
+    if(disponibile < 800) {
+        banner.className = "alert-banner alert-danger";
+        banner.textContent = "⚠️ ATTENZIONE: Gap critico tra i bonifici. Riduci spese svago.";
+    } else if (bancaBal < 500) {
+        banner.className = "alert-banner alert-warn";
+        banner.textContent = "⏳ Saldo basso in attesa del prossimo stipendio.";
+    } else {
+        banner.className = "alert-banner alert-ok";
+        banner.textContent = "✅ Flusso di cassa bilanciato.";
+    }
 
-    // Lista Fisse con matita
-    document.getElementById('budList').innerHTML = state.buds.map((f, i) => {
-      const isEditing = editingBudId === i;
-      return `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:#fff1f2; border-radius:12px; margin-bottom:6px; border-left:4px solid var(--out)">
-        <div style="flex:1">${isEditing ? `<input type="date" id="eb-date-${i}" class="edit-input" value="${f.date}"><input type="text" id="eb-cat-${i}" class="edit-input" style="margin-top:4px" value="${f.cat}">` : `<small>${fmtDate(f.date)}</small><br><b>${f.cat}</b>`}</div>
-        <div style="text-align:right">${isEditing ? `<input type="number" id="eb-amt-${i}" class="edit-input" value="${f.amt}">` : `<b style="color:var(--out)">${fmt(f.amt)}</b>`}<button class="btn-icon" onclick="${isEditing ? `saveBud(${i})` : `toggleEditBud(${i})`}">${isEditing ? '💾' : '✏️'}</button><button class="btn-icon" onclick="delB(${i})">🗑️</button></div></div>`;
-    }).join('');
+    // Svago Bar
+    const perc = Math.min(100, (spesoSvago / state.budgetSvago) * 100);
+    document.getElementById('svagoBar').style.width = perc + "%";
+    document.getElementById('svagoRes').textContent = fmt(residuoSvago);
+    document.getElementById('svagoAdvice').textContent = disponibile < 1000 ? "⚠️ Disponibilità limitata: conserva il budget svago." : "Procedi con la pianificazione ordinaria.";
 
-    // Storico con matita e ricerca
-    const filtered = state.movs.filter(m => m.cat.toLowerCase().includes(query) || m.amt.toString().includes(query));
-    const sorted = [...filtered].sort((a,b) => new Date(b.date) - new Date(a.date));
-    
-    document.getElementById('rows').innerHTML = sorted.slice(0,15).map((m) => {
-      const idx = state.movs.indexOf(m); const isEditing = editingId === idx;
-      return `<tr><td>${isEditing ? `<input type="date" id="edit-date-${idx}" class="edit-input" value="${m.date}"><input type="text" id="edit-cat-${idx}" class="edit-input" style="margin-top:4px" value="${m.cat}">` : `<small>${fmtDate(m.date)}</small><br><b>${m.cat}</b>`}</td>
-        <td style="text-align:right" class="money ${m.type}">${isEditing ? `<input type="number" id="edit-amt-${idx}" class="edit-input" value="${m.amt}">` : (m.type==='entrata'?'+':'-') + fmt(m.amt)}</td>
-        <td style="text-align:right"><button class="btn-icon" onclick="${isEditing ? `saveEdit(${idx})` : `toggleEdit(${idx})`}">${isEditing ? '💾' : '✏️'}</button><button class="btn-icon" onclick="delM(${idx})">🗑️</button></td></tr>`;
-    }).join('');
-    updateChart(); saveData();
+    // Storico
+    const sorted = [...state.movs].sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0,10);
+    document.getElementById('rows').innerHTML = sorted.map((m,i) => `<tr>
+        <td><small>${m.date.split('-').reverse().join('/')}</small><br><b>${m.cat}</b></td>
+        <td class="money ${m.type}" style="text-align:right">${m.type==='entrata'?'+':'-'}${fmt(m.amt)}</td>
+        <td><button onclick="delMov(${state.movs.indexOf(m)})" class="btn-icon">🗑️</button></td>
+    </tr>`).join('');
+
+    // Fisse
+    document.getElementById('budList').innerHTML = state.buds.map((b,i) => `<div style="display:flex; justify-content:space-between; font-size:0.8rem; padding:5px 0; border-bottom:1px solid #f1f5f9">
+        <span>${b.cat}</span><b>${fmt(b.amt)}</b><button onclick="delBud(${i})" class="btn-icon">×</button>
+    </div>`).join('');
+
+    updateChart(bancaBal, stipendiPresunti, fisseMancanti);
+    localStorage.setItem('bpm_v89', JSON.stringify(state));
   }
 
-  function toggleEdit(i) { editingId = (editingId === i) ? null : i; render(); }
-  function saveEdit(i) { state.movs[i].date = document.getElementById(`edit-date-${i}`).value; state.movs[i].cat = document.getElementById(`edit-cat-${i}`).value; state.movs[i].amt = Number(document.getElementById(`edit-amt-${i}`).value); editingId = null; render(); }
-  function toggleEditBud(i) { editingBudId = (editingBudId === i) ? null : i; render(); }
-  function saveBud(i) { state.buds[i].date = document.getElementById(`eb-date-${i}`).value; state.buds[i].cat = document.getElementById(`eb-cat-${i}`).value; state.buds[i].amt = Number(document.getElementById(`eb-amt-${i}`).value); editingBudId = null; render(); }
-  function delM(i) { if(confirm("Eliminare?")) { state.movs.splice(i,1); render(); } }
-  function delB(i) { if(confirm("Eliminare?")) { state.buds.splice(i,1); render(); } }
-
-  function manageFunds(action) {
-    let amt = Number(prompt("Importo:")); if(!amt) return; const date = new Date().toISOString().slice(0,10);
-    if(action==='save_in') { state.sBal += amt; state.movs.push({date, source:'banca', type:'uscita', amt, cat:"💎 Trasf. Risparmio", tag:"ordinaria"}); }
-    else if(action==='save_out') { state.sBal -= amt; state.movs.push({date, source:'banca', type:'entrata', amt, cat:"🔙 Revoca Risparmio", tag:"ordinaria"}); }
-    else if(action==='cash_in') { state.movs.push({date, source:'banca', type:'uscita', amt, cat:"🏧 Prelievo", tag:"ordinaria"}); state.movs.push({date, source:'contanti', type:'entrata', amt, cat:"💵 Carico Cassa", tag:"ordinaria"}); }
-    render();
-  }
-
-  function updateChart() {
+  function updateChart(current, stipendi, fisse) {
     const ctx = document.getElementById('balanceChart').getContext('2d');
-    const sorted = [...state.movs].filter(m=>m.source=='banca').sort((a,b)=>new Date(a.date)-new Date(b.date));
-    let rb = 0; const labels = sorted.map(m => m.date.slice(5).replace('-','/'));
-    const dataPoints = sorted.map(m => { rb += (m.type=='entrata'?m.amt:-m.amt); return rb; });
+    let labels = ["Oggi", "Giorno 15", "Giorno 30"];
+    let data = [current];
+    
+    // Proiezione semplificata
+    let b15 = current + (stipendi.find(s=>s.date.includes('-15'))?.amt || 0) - (fisse.length * 50); // stima fisse
+    let b30 = b15 + (stipendi.find(s=>s.date.includes('-30'))?.amt || 0);
+
     if(chart) chart.destroy();
-    chart = new Chart(ctx, { type: 'line', data: { labels: labels, datasets: [{ label:'Saldo', data: dataPoints, borderColor: '#01696f', fill: true, backgroundColor: 'rgba(1, 105, 92, 0.05)', tension: 0.3 }, { label:'Soglia 800€', data: Array(labels.length).fill(800), borderColor: 'red', borderDash: [5,5], pointRadius: 0 }] }, options: { responsive: true, plugins: { legend: { display: false } } } });
+    chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Proiezione Liquidità',
+                data: [current, b15, b30],
+                borderColor: '#01696f',
+                backgroundColor: 'rgba(1, 105, 111, 0.1)',
+                fill: true,
+                tension: 0.4
+            }, {
+                label: 'Soglia Sicurezza',
+                data: [800, 800, 800],
+                borderColor: 'red',
+                borderDash: [5,5],
+                pointRadius: 0
+            }]
+        },
+        options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: false } } }
+    });
   }
 
   document.getElementById('movForm').onsubmit = e => {
     e.preventDefault();
-    state.movs.push({ date: document.getElementById('mDate').value, source: document.getElementById('mSource').value, type: document.getElementById('mType').value, amt: Number(document.getElementById('mAmt').value), tag: document.getElementById('mTag').value, cat: document.getElementById('mCat').value });
+    state.movs.push({
+        date: document.getElementById('mDate').value,
+        source: document.getElementById('mSource').value,
+        type: document.getElementById('mType').value,
+        tag: document.getElementById('mTag').value,
+        amt: Number(document.getElementById('mAmt').value),
+        cat: document.getElementById('mCat').value
+    });
     render(); e.target.reset();
   };
+
   document.getElementById('budForm').onsubmit = e => {
     e.preventDefault();
-    state.buds.push({ date: document.getElementById('bDate').value, amt: Number(document.getElementById('bAmt').value), cat: document.getElementById('bCat').value });
+    state.buds.push({ cat: document.getElementById('bCat').value, amt: Number(document.getElementById('bAmt').value) });
     render(); e.target.reset();
   };
 
-  function showDetail(t) {
-    const d = getCalculatedData(); let title = "", body = "";
-    if(t==='banca') title = "Saldo Reale";
-    if(t==='disp') { title = "Disponibile"; body = `Fisse da pagare:<br>` + d.fisseMancanti.map(f => `<div>- ${f.cat}: ${fmt(f.amt)}</div>`).join('') + `<hr>Saldo banca + Stipendio teorico/reale.`; }
-    if(t==='save') title = "Risparmio";
-    if(t==='cash') title = "Contanti";
-    if(t==='week') { title = "Spese Settimanali"; body = `Dettaglio uscite ultimi 7gg:<br>` + d.movsSettimana.map(m => `<div>${fmtDate(m.date)} - ${m.cat}: <b>${fmt(m.amt)}</b></div>`).join('') + `<hr>Totale: ${fmt(d.spesoSettimana)}`; }
-    if(t==='varie') { title = "Target Shopping"; body = `Budget mensile: 500€<br>Ancora spendibili: <b>${fmt(d.residuoSvago)}</b>.`; }
-    document.getElementById('modalTitle').innerHTML = title; document.getElementById('modalBody').innerHTML = body; document.getElementById('detailModal').style.display = 'flex';
+  function delMov(i) { state.movs.splice(i,1); render(); }
+  function delBud(i) { state.buds.splice(i,1); render(); }
+
+  function manageFunds(type) {
+    const amt = Number(prompt("Importo operazione:"));
+    if(!amt) return;
+    if(type === 'save_in') { 
+        state.sBal += amt; 
+        state.movs.push({date: today(), source:'banca', type:'uscita', tag:'ordinaria', amt, cat:'💎 Versamento Risparmio'});
+    } else {
+        state.movs.push({date: today(), source:'banca', type:'uscita', tag:'ordinaria', amt, cat:'🏧 Prelievo Contante'});
+        state.movs.push({date: today(), source:'contanti', type:'entrata', tag:'ordinaria', amt, cat:'💵 Carico Cassa'});
+    }
+    render();
   }
 
-  function exportData() { const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'cashflow_v87.json'; a.click(); }
-  function importData(e) { const r = new FileReader(); r.onload = x => { state = JSON.parse(x.target.result); render(); }; r.readAsText(e.target.files[0]); }
-  function closeModal() { document.getElementById('detailModal').style.display='none'; }
-  loadData();
+  function showDetail(type) {
+      const d = document.getElementById('modalBody');
+      const t = document.getElementById('modalTitle');
+      if(type === 'gap') {
+          t.textContent = "Gap Analyzer";
+          d.innerHTML = "Il calcolo prevede l'arrivo dei due stipendi (15 e 30) e sottrae le spese fisse che hai pianificato ma non ancora pagate. Se il saldo scende sotto 800€ tra un bonifico e l'altro, il banner diventerà rosso.";
+      }
+      document.getElementById('detailModal').style.display = 'flex';
+  }
+
+  function closeModal() { document.getElementById('detailModal').style.display = 'none'; }
+  function exportData() {
+    const blob = new Blob([JSON.stringify(state)], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'cashflow_v89.json'; a.click();
+  }
+
+  let chart;
+  load();
 </script>
 </body>
 </html>
