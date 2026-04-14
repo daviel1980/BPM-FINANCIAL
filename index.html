@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Executive Cashflow v100 - Full Dynamic</title>
+  <title>Executive Cashflow v101 - Net Availability</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -58,7 +58,7 @@
 
   <div class="stats-grid">
     <div class="stat-card border-banca" onclick="showDetail('banca')"><span class="stat-label">SALDO REALE 💳</span><div id="actBal" class="stat-value">0 €</div></div>
-    <div class="stat-card border-disp" onclick="showDetail('gap')"><span class="stat-label">DISPONIBILE (GAP) 🏁</span><div id="curBal" class="stat-value">0 €</div></div>
+    <div class="stat-card border-disp" onclick="showDetail('gap')"><span class="stat-label">DISPONIBILE (NETTO GAP) 🏁</span><div id="curBal" class="stat-value">0 €</div></div>
     <div class="stat-card border-save" onclick="showDetail('risparmio')">
       <div class="quick-actions"><button class="btn-small" onclick="event.stopPropagation(); manageFunds('save_in')">➕</button><button class="btn-small" onclick="event.stopPropagation(); manageFunds('save_out')">🔙</button></div>
       <span class="stat-label">RISPARMIO 💎</span><div id="savBal" class="stat-value">0 €</div>
@@ -75,7 +75,7 @@
   <div id="alertBanner"></div>
 
   <div class="card">
-    <h2 class="section-title">Proiezione Giornaliera (Fino a fine mese)</h2>
+    <h2 class="section-title">Andamento Giornaliero (Liquido)</h2>
     <canvas id="balanceChart" height="180"></canvas>
   </div>
 
@@ -126,11 +126,11 @@
   let editingId = null; let editingBudId = null; let chart;
 
   function loadData() {
-    const saved = localStorage.getItem('bpm_v100');
+    const saved = localStorage.getItem('bpm_v101');
     if (saved) state = JSON.parse(saved);
     render();
   }
-  function saveData() { localStorage.setItem('bpm_v100', JSON.stringify(state)); }
+  function saveData() { localStorage.setItem('bpm_v101', JSON.stringify(state)); }
 
   function getCalculatedData() {
     const today = new Date();
@@ -138,6 +138,7 @@
     const curMonth = todayStr.slice(0,7);
     const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
     
+    // Saldo reale escludendo i movimenti di risparmio se sommati erroneamente nel tempo
     const bancaBal = state.movs.filter(m => m.date <= todayStr && m.source === 'banca').reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
     const cashBal = state.movs.filter(m => m.source === 'contanti' && m.date <= todayStr).reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
     
@@ -174,6 +175,8 @@
         dailyProjection.push({ day: d, balance: runningBalance });
     }
     const spesoSvago = state.movs.filter(m => m.date.slice(0,7) === curMonth && m.tag === 'svago').reduce((s,m) => s + m.amt, 0);
+    
+    // Il "Disponibile (GAP)" è l'ultimo valore della proiezione basato SOLO sui flussi reali, escludendo il fondo risparmio sBal.
     return { bancaBal, cashBal, avail: dailyProjection.length > 0 ? dailyProjection[dailyProjection.length-1].balance : bancaBal, residuoSvago: 500 - spesoSvago, dailyProjection, missingStipends, missingFisse };
   }
 
@@ -214,20 +217,21 @@
     const d = getCalculatedData();
     let title = "", body = "";
     if(type === 'gap') {
-        title = "Analisi Disponibile GAP 🏁";
-        body = `<div class="gap-item"><span>Saldo reale attuale:</span><b>${fmt(d.bancaBal)}</b></div>`;
-        body += `<div style="color:var(--in); font-weight:700; margin:10px 0 5px 0">Entrate attese:</div>`;
+        title = "Analisi Disponibile (Senza Risparmio)";
+        body = `<div class="gap-item"><span>Saldo banca attuale:</span><b>${fmt(d.bancaBal)}</b></div>`;
+        body += `<div style="color:var(--in); font-weight:700; margin:10px 0 5px 0">Entrate attese (non ancora caricate):</div>`;
         d.missingStipends.forEach(s => body += `<div class="gap-item"><span>+ ${s.name}</span><b>${fmt(s.amt)}</b></div>`);
-        body += `<div style="color:var(--out); font-weight:700; margin:10px 0 5px 0">Spese fisse da pagare:</div>`;
+        body += `<div style="color:var(--out); font-weight:700; margin:10px 0 5px 0">Fisse da pagare:</div>`;
         d.missingFisse.forEach(f => body += `<div class="gap-item"><span>- ${f.name} (Giorno ${f.day})</span><b>${fmt(f.amt)}</b></div>`);
-        body += `<hr><div class="gap-item" style="font-size:1rem; color:var(--accent)"><span>Proiezione fine mese:</span><b>${fmt(d.avail)}</b></div>`;
+        body += `<hr><div class="gap-item" style="font-size:1rem; color:var(--accent)"><span>Totale Netto a fine mese:</span><b>${fmt(d.avail)}</b></div>`;
+        body += `<p style="font-size:0.65rem; color:gray; margin-top:10px">* Il fondo risparmio da ${fmt(state.sBal)} è stato escluso da questo calcolo.</p>`;
     } else if(type === 'banca') {
         title = "Saldo Reale Banca";
-        body = "Somma di tutti i movimenti registrati fino ad oggi.";
+        body = "Somma movimenti registrati fino ad oggi.";
     } else if(type === 'shopping') {
-        title = "Dettaglio Shopping (500€)";
-        body = `Rimanente: <b>${fmt(d.residuoSvago)}</b><br><br>Lista spese svago del mese:<br>` + state.movs.filter(x => x.tag === 'svago' && x.date.startsWith(new Date().toISOString().slice(0,7))).map(x => `• ${x.cat}: ${fmt(x.amt)}`).join('<br>');
-    } else if(type === 'risparmio') { title = "Risparmio 💎"; body = `Fondo vacanze: <b>${fmt(state.sBal)}</b>`; }
+        title = "Target Shopping (500€)";
+        body = `Rimanente: <b>${fmt(d.residuoSvago)}</b><br><br>Lista uscite svago:<br>` + state.movs.filter(x => x.tag === 'svago' && x.date.startsWith(new Date().toISOString().slice(0,7))).map(x => `• ${x.cat}: ${fmt(x.amt)}`).join('<br>');
+    } else if(type === 'risparmio') { title = "Risparmio 💎"; body = `Fondo accumulato: <b>${fmt(state.sBal)}</b>`; }
     else if(type === 'cassa') { title = "Contante 💵"; body = `Saldo fisico: <b>${fmt(d.cashBal)}</b>`; }
     
     document.getElementById('modalTitle').innerHTML = title;
@@ -263,7 +267,7 @@
   document.getElementById('budForm').onsubmit = e => { e.preventDefault(); state.buds.push({ cat: document.getElementById('bCat').value, amt: Number(document.getElementById('bAmt').value), day: document.getElementById('bDay').value }); render(); e.target.reset(); };
   function delM(i) { if(confirm("Eliminare?")) { state.movs.splice(i,1); render(); } }
   function delB(i) { if(confirm("Eliminare?")) { state.buds.splice(i,1); render(); } }
-  function exportData() { const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'cashflow_v100.json'; a.click(); }
+  function exportData() { const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'executive_cashflow_v101.json'; a.click(); }
   function importData(e) { const r = new FileReader(); r.onload = x => { state = JSON.parse(x.target.result); render(); }; r.readAsText(e.target.files[0]); }
   loadData();
 </script>
