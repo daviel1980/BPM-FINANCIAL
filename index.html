@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Executive Cashflow v96 - Full Restore</title>
+  <title>Executive Cashflow v97 - Interactive Full</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -12,69 +12,76 @@
     }
     body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; padding: 0.5rem; }
     .container { max-width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 0.8rem; }
-    .header-card { background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: white; padding: 1rem; border-radius: 1rem; text-align: center; }
+    .header-card { background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: white; padding: 1.2rem; border-radius: 1rem; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
     .title { margin: 0; font-size: 0.9rem; font-weight: 800; text-transform: uppercase; line-height: 1.3; }
 
     .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
     .stat-card { background: var(--card); padding: 0.9rem; border-radius: 0.75rem; border: 1px solid var(--border); cursor: pointer; position: relative; }
     .stat-label { font-size: 0.55rem; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 3px; display: block; }
-    .stat-value { font-size: 1rem; font-weight: 800; }
+    .stat-value { font-size: 1.1rem; font-weight: 800; }
     
     .full-width { grid-column: span 2; }
-    .border-banca { border-left: 4px solid var(--in); }
-    .border-disp { border-left: 4px solid var(--varie); background: #fdf2ff; }
-    .border-save { border-left: 4px solid var(--save); }
-    .border-cash { border-left: 4px solid var(--cash); background: #fffbeb; }
+    .border-banca { border-left: 5px solid var(--in); }
+    .border-disp { border-left: 5px solid var(--varie); background: #fdf2ff; }
+    .border-save { border-left: 5px solid var(--save); }
+    .border-cash { border-left: 5px solid var(--cash); }
 
     .quick-actions { display: flex; gap: 4px; position: absolute; top: 6px; right: 6px; }
     .btn-small { background: #fff; border: 1px solid var(--border); padding: 2px 6px; font-size: 0.6rem; border-radius: 4px; cursor: pointer; font-weight: 800; }
     
-    #alertBanner { padding: 0.7rem; border-radius: 0.75rem; font-weight: 800; text-align: center; font-size: 0.75rem; }
-    .alert-ok { background: #ecfdf5; color: #065f46; }
-    .alert-warn { background: #fef2f2; color: #991b1b; }
+    #alertBanner { padding: 0.8rem; border-radius: 0.75rem; font-weight: 800; text-align: center; font-size: 0.8rem; }
+    .alert-ok { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+    .alert-warn { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
 
-    .card { background: var(--card); padding: 1rem; border-radius: 1rem; border: 1px solid var(--border); }
-    .section-title { margin: 0 0 0.8rem 0; font-size: 0.8rem; font-weight: 800; color: var(--accent); text-transform: uppercase; border-left: 3px solid var(--accent); padding-left: 6px; }
+    .card { background: var(--card); padding: 1.2rem; border-radius: 1rem; border: 1px solid var(--border); }
+    .section-title { margin: 0 0 1rem 0; font-size: 0.85rem; font-weight: 800; color: var(--accent); text-transform: uppercase; border-left: 4px solid var(--accent); padding-left: 8px; }
 
-    input, select, button { border-radius: 0.5rem; border: 1px solid var(--border); padding: 0.6rem; font-size: 0.85rem; width: 100%; margin-bottom: 0.4rem; }
-    button.primary { background: var(--accent); color: white; border: none; font-weight: 800; cursor: pointer; margin-top: 5px; }
+    input, select, button { border-radius: 0.6rem; border: 1px solid var(--border); padding: 0.7rem; font-size: 0.9rem; width: 100%; margin-bottom: 0.5rem; box-sizing: border-box; }
+    button.primary { background: var(--accent); color: white; border: none; font-weight: 800; cursor: pointer; }
     
     .table { width: 100%; border-collapse: collapse; }
-    .table td { padding: 0.6rem 0.2rem; border-bottom: 1px solid var(--border); font-size: 0.75rem; }
+    .table td { padding: 0.8rem 0.2rem; border-bottom: 1px solid var(--border); font-size: 0.8rem; }
     .money.in { color: var(--in); font-weight: 700; }
     .money.out { color: var(--out); font-weight: 700; }
 
-    .btn-icon { background: none; border: none; cursor: pointer; font-size: 0.9rem; padding: 4px; }
-    .edit-input { font-size: 0.75rem; padding: 4px; border: 1px solid var(--save); border-radius: 4px; width: 100%; box-sizing: border-box; }
+    /* MODALE RIPRISTINATO */
+    .modal { display: none; position: fixed; z-index: 1000; left:0; top:0; width:100%; height:100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+    .modal-content { background: white; padding: 1.5rem; border-radius: 1.2rem; width: 92%; max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+    .btn-icon { background: none; border: none; cursor: pointer; font-size: 1rem; padding: 4px; }
+    .edit-input { font-size: 0.8rem; padding: 5px; border: 1px solid var(--save); border-radius: 6px; width: 100%; box-sizing: border-box; }
   </style>
 </head>
 <body>
 
 <div class="container">
   <div class="header-card">
-    <h1 class="title">Gestione Cashflow💵:<br>Risparmi e Tempo Libero</h1>
+    <h1 class="title">Executive Cashflow💵:<br>Gestione Interattiva v97</h1>
   </div>
 
   <div class="stats-grid">
-    <div class="stat-card border-banca"><span class="stat-label">SALDO REALE 💳</span><div id="actBal" class="stat-value">0 €</div></div>
-    <div class="stat-card border-disp"><span class="stat-label">DISPONIBILE (PROIEZIONE) 🏁</span><div id="curBal" class="stat-value">0 €</div></div>
-    <div class="stat-card border-save">
-      <div class="quick-actions"><button class="btn-small" onclick="manageFunds('save_in')">➕</button><button class="btn-small" onclick="manageFunds('save_out')">🔙</button></div>
+    <div class="stat-card border-banca" onclick="showDetail('banca')">
+        <span class="stat-label">SALDO REALE 💳</span><div id="actBal" class="stat-value">0 €</div>
+    </div>
+    <div class="stat-card border-disp" onclick="showDetail('gap')">
+        <span class="stat-label">DISPONIBILE (FINE MESE) 🏁</span><div id="curBal" class="stat-value">0 €</div>
+    </div>
+    <div class="stat-card border-save" onclick="showDetail('risparmio')">
+      <div class="quick-actions"><button class="btn-small" onclick="event.stopPropagation(); manageFunds('save_in')">➕</button><button class="btn-small" onclick="event.stopPropagation(); manageFunds('save_out')">🔙</button></div>
       <span class="stat-label">RISPARMIO 💎</span><div id="savBal" class="stat-value">0 €</div>
     </div>
-    <div class="stat-card border-cash">
-      <div class="quick-actions"><button class="btn-small" onclick="manageFunds('cash_in')">➕</button></div>
+    <div class="stat-card border-cash" onclick="showDetail('cassa')">
+      <div class="quick-actions"><button class="btn-small" onclick="event.stopPropagation(); manageFunds('cash_in')">➕</button></div>
       <span class="stat-label">CONTANTE 💵</span><div id="cashBal" class="stat-value">0 €</div>
     </div>
-    <div class="stat-card full-width" style="border-left: 4px solid var(--varie); background: #fdf2ff;">
-      <span class="stat-label">TARGET SHOPPING (500€/MESE) 🛍️</span><div id="varieBal" class="stat-value">0 €</div>
+    <div class="stat-card full-width" style="border-left: 5px solid var(--varie); background: #fdf2ff;" onclick="showDetail('shopping')">
+      <span class="stat-label">TARGET SHOPPING (500€) 🛍️</span><div id="varieBal" class="stat-value">0 €</div>
     </div>
   </div>
 
   <div id="alertBanner"></div>
 
   <div class="card">
-    <h2 class="section-title">Andamento Giornaliero (Gap stipendi)</h2>
+    <h2 class="section-title">Andamento Proiettato</h2>
     <canvas id="balanceChart" height="180"></canvas>
   </div>
 
@@ -82,46 +89,43 @@
     <h2 class="section-title">Nuova Registrazione</h2>
     <form id="movForm">
       <input type="date" id="mDate" required value="2026-04-15">
-      <div style="display:flex; gap:8px">
-          <select id="mSource"><option value="banca">💳 Banca</option><option value="contanti">💵 Cassa</option></select>
-          <select id="mType"><option value="entrata">Entrata (+)</option><option value="uscita">Uscita (-)</option></select>
-      </div>
+      <div style="display:flex; gap:8px"><select id="mSource"><option value="banca">💳 Banca</option><option value="contanti">💵 Cassa</option></select><select id="mType"><option value="entrata">Entrata (+)</option><option value="uscita">Uscita (-)</option></select></div>
       <select id="mTag">
-          <option value="stipendio">💰 Stipendio (15 o 30)</option>
+          <option value="stipendio">💰 Stipendio</option>
           <option value="inps">🏛️ Entrata INPS</option>
           <option value="ordinaria">Spesa Comune / Fissa</option>
           <option value="svago">🛍️ Svago / Shopping</option>
-          <option value="settimanale">📊 Spesa Settimanale Cumulata</option>
       </select>
       <input type="number" id="mAmt" step="0.01" placeholder="Importo €" required>
       <input type="text" id="mCat" placeholder="Descrizione" required>
-      <button type="submit" class="primary">SALVA</button>
+      <button type="submit" class="primary">SALVA MOVIMENTO</button>
     </form>
   </div>
 
   <div class="card">
     <h2 class="section-title">Pianificazione Fisse</h2>
-    <form id="budForm">
-      <div style="display:flex; gap:8px">
-          <input type="text" id="bCat" placeholder="Nome" required style="flex:2">
-          <input type="number" id="bAmt" placeholder="€" required style="flex:1">
-      </div>
-      <input type="number" id="bDay" placeholder="Giorno del mese (1-31)" required min="1" max="31">
-      <button type="submit" class="primary">AGGIUNGI</button>
-    </form>
+    <form id="budForm" style="display:flex; gap:5px"><input type="text" id="bCat" placeholder="Nome" required style="flex:2"><input type="number" id="bAmt" placeholder="€" required style="flex:1"><input type="number" id="bDay" placeholder="G" required style="flex:0.6"><button type="submit" style="flex:0.6; background:var(--accent); color:white; border:none; border-radius:8px">+</button></form>
     <div id="budList" style="margin-top:0.8rem"></div>
   </div>
 
   <div class="card">
-    <h2 class="section-title">Storico & Ricerca</h2>
+    <h2 class="section-title">Storico Operazioni</h2>
     <input type="text" id="searchInput" placeholder="Cerca..." onkeyup="render()" style="margin-bottom:1rem">
     <table class="table"><tbody id="rows"></tbody></table>
     <div style="display:flex; gap:8px; margin-top:1.5rem">
-      <button onclick="exportData()" style="background:#eee; font-size:0.75rem; font-weight:700">BACKUP</button>
-      <button onclick="document.getElementById('importFile').click()" style="background:#eee; font-size:0.75rem; font-weight:700">IMPORTA</button>
+      <button onclick="exportData()" style="background:#eee; font-size:0.75rem; font-weight:700; flex:1">BACKUP</button>
+      <button onclick="document.getElementById('importFile').click()" style="background:#eee; font-size:0.75rem; font-weight:700; flex:1">IMPORTA</button>
     </div>
     <input type="file" id="importFile" style="display:none" onchange="importData(event)">
   </div>
+</div>
+
+<div id="detailModal" class="modal" onclick="closeModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h3 id="modalTitle" style="margin:0 0 1rem 0; color:var(--accent); border-bottom:1px solid #eee; padding-bottom:8px">Dettaglio</h3>
+        <div id="modalBody" style="font-size:0.85rem; line-height:1.6"></div>
+        <button onclick="closeModal()" style="margin-top:1.5rem; padding:12px; background:var(--accent); color:white; border:none; border-radius:10px; width:100%; font-weight:800">CHIUDI</button>
+    </div>
 </div>
 
 <script>
@@ -129,15 +133,15 @@
   const fmtDate = d => d.split('-').reverse().join('/');
   const CONFIG = { stip15: 1650, stip30: 1650, inpsVal: 400, inpsG: 15 };
 
-  let state = { movs: [], buds: [], sBal: 0, alertLimit: 800 };
+  let state = { movs: [], buds: [], sBal: 0 };
   let editingId = null; let editingBudId = null; let chart;
 
   function loadData() {
-    const saved = localStorage.getItem('bpm_v96');
+    const saved = localStorage.getItem('bpm_v97');
     if (saved) state = JSON.parse(saved);
     render();
   }
-  function saveData() { localStorage.setItem('bpm_v96', JSON.stringify(state)); }
+  function saveData() { localStorage.setItem('bpm_v97', JSON.stringify(state)); }
 
   function getCalculatedData() {
     const today = new Date();
@@ -180,18 +184,18 @@
     const banner = document.getElementById('alertBanner');
     const minBal = d.dailyProjection.length > 0 ? Math.min(...d.dailyProjection.map(p => p.balance)) : d.bancaBal;
     banner.className = minBal < 800 ? "alert-warn" : "alert-ok";
-    banner.textContent = minBal < 800 ? `🚨 GAP ALERT: Minimo ${fmt(minBal)}` : "✅ PROIEZIONE STABILE";
+    banner.textContent = minBal < 800 ? `🚨 ATTENZIONE: Il saldo scenderà a ${fmt(minBal)}` : "✅ SALDO SICURO (>800€)";
 
     document.getElementById('budList').innerHTML = state.buds.map((f, i) => {
       const isE = editingBudId === i;
-      return `<div style="display:flex; justify-content:space-between; align-items:center; padding:8px; background:#fff1f2; border-radius:10px; margin-bottom:4px; border-left:3px solid var(--out)">
-        <div style="flex:1">${isE ? `<input type="text" id="eb-cat-${i}" class="edit-input" value="${f.cat}"><input type="number" id="eb-day-${i}" class="edit-input" style="margin-top:4px" value="${f.day || 1}">` : `<b>${f.cat}</b><br><small>Giorno: ${f.day || 1}</small>`}</div>
-        <div style="text-align:right">${isE ? `<input type="number" id="eb-amt-${i}" class="edit-input" value="${f.amt}">` : `<b>${fmt(f.amt)}</b>`}<button class="btn-icon" onclick="${isE ? `saveBud(${i})` : `toggleEditBud(${i})`}">${isE ? '💾' : '✏️'}</button><button class="btn-icon" onclick="delB(${i})">🗑️</button></div></div>`;
+      return `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:#fff1f2; border-radius:12px; margin-bottom:6px; border-left:4px solid var(--out)">
+        <div style="flex:1">${isE ? `<input type="text" id="eb-cat-${i}" class="edit-input" value="${f.cat}"><input type="number" id="eb-day-${i}" class="edit-input" style="margin-top:4px" value="${f.day}">` : `<b>${f.cat}</b><br><small>Giorno: ${f.day}</small>`}</div>
+        <div style="text-align:right">${isE ? `<input type="number" id="eb-amt-${i}" class="edit-input" value="${f.amt}">` : `<b style="color:var(--out)">${fmt(f.amt)}</b>`}<button class="btn-icon" onclick="${isE ? `saveBud(${i})` : `toggleEditBud(${i})`}">${isE ? '💾' : '✏️'}</button><button class="btn-icon" onclick="delB(${i})">🗑️</button></div></div>`;
     }).join('');
 
     const filt = state.movs.filter(m => m.cat.toLowerCase().includes(q) || m.amt.toString().includes(q));
     const sorted = [...filt].sort((a,b) => new Date(b.date) - new Date(a.date));
-    document.getElementById('rows').innerHTML = sorted.slice(0,12).map((m) => {
+    document.getElementById('rows').innerHTML = sorted.slice(0,10).map((m) => {
       const idx = state.movs.indexOf(m); const isE = editingId === idx;
       return `<tr><td>${isE ? `<input type="date" id="ed-${idx}" class="edit-input" value="${m.date}"><input type="text" id="ec-${idx}" class="edit-input" style="margin-top:4px" value="${m.cat}">` : `<small>${fmtDate(m.date)}</small><br><b>${m.cat}</b>`}</td>
         <td style="text-align:right" class="money ${m.type}">${isE ? `<input type="number" id="ea-${idx}" class="edit-input" value="${m.amt}">` : (m.type==='entrata'?'+':'-') + fmt(m.amt)}</td>
@@ -200,29 +204,43 @@
     updateChart(d.dailyProjection); saveData();
   }
 
-  function toggleEdit(i) { editingId = (editingId === i) ? null : i; render(); }
-  function saveEdit(i) { 
-    state.movs[i].date = document.getElementById(`ed-${i}`).value; 
-    state.movs[i].cat = document.getElementById(`ec-${i}`).value; 
-    state.movs[i].amt = Number(document.getElementById(`ea-${i}`).value); 
-    editingId = null; render(); 
-  }
-  function toggleEditBud(i) { editingBudId = (editingBudId === i) ? null : i; render(); }
-  function saveBud(i) { 
-    state.buds[i].cat = document.getElementById(`eb-cat-${i}`).value; 
-    state.buds[i].day = document.getElementById(`eb-day-${i}`).value; 
-    state.buds[i].amt = Number(document.getElementById(`eb-amt-${i}`).value); 
-    editingBudId = null; render(); 
+  function showDetail(type) {
+    const today = new Date().toISOString().slice(0,7);
+    let title = "", body = "";
+    if(type === 'banca') {
+        title = "Movimenti Reali Banca";
+        const m = state.movs.filter(x => x.source === 'banca' && x.date.startsWith(today));
+        body = m.map(x => `• ${fmtDate(x.date)}: ${x.cat} (${fmt(x.amt)})`).join('<br>') || "Nessun movimento reale questo mese.";
+    } else if(type === 'shopping') {
+        title = "Dettaglio Shopping (Svago)";
+        const m = state.movs.filter(x => x.tag === 'svago' && x.date.startsWith(today));
+        const tot = m.reduce((s,x)=>s+x.amt,0);
+        body = `Totale speso: <b>${fmt(tot)}</b> su 500€<br><br>` + (m.map(x => `• ${x.cat}: ${fmt(x.amt)}`).join('<br>') || "Nessuna spesa svago.");
+    } else if(type === 'gap') {
+        title = "Pianificazione Fine Mese";
+        body = "Il saldo proiettato tiene conto di:<br>• Stipendio 15 e 30<br>• Entrata INPS<br>• Spese fisse non ancora pagate.";
+    } else if(type === 'risparmio') {
+        body = `Fondo vacanze accumulato: <b>${fmt(state.sBal)}</b>`;
+    } else if(type === 'cassa') {
+        const m = state.movs.filter(x => x.source === 'contanti' && x.date.startsWith(today));
+        body = `Saldo fisico in cassa: <b>${fmt(getCalculatedData().cashBal)}</b><br><br>` + m.map(x => `• ${x.cat}: ${fmt(x.amt)}`).join('<br>');
+    }
+    document.getElementById('modalTitle').innerHTML = title;
+    document.getElementById('modalBody').innerHTML = body;
+    document.getElementById('detailModal').style.display = 'flex';
   }
 
+  function closeModal() { document.getElementById('detailModal').style.display = 'none'; }
+  function toggleEdit(i) { editingId = (editingId === i) ? null : i; render(); }
+  function saveEdit(i) { state.movs[i].date = document.getElementById(`ed-${i}`).value; state.movs[i].cat = document.getElementById(`ec-${i}`).value; state.movs[i].amt = Number(document.getElementById(`ea-${i}`).value); editingId = null; render(); }
+  function toggleEditBud(i) { editingBudId = (editingBudId === i) ? null : i; render(); }
+  function saveBud(i) { state.buds[i].cat = document.getElementById(`eb-cat-${i}`).value; state.buds[i].day = document.getElementById(`eb-day-${i}`).value; state.buds[i].amt = Number(document.getElementById(`eb-amt-${i}`).value); editingBudId = null; render(); }
+
   function manageFunds(action) {
-    let amt = Number(prompt("Importo:")); if(!amt) return; const dStr = new Date().toISOString().slice(0,10);
+    let amt = Number(prompt("Importo €:")); if(!amt) return; const dStr = new Date().toISOString().slice(0,10);
     if(action==='save_in') { state.sBal += amt; state.movs.push({date:dStr, source:'banca', type:'uscita', amt, cat:"💎 Risparmio", tag:"ordinaria"}); }
     else if(action==='save_out') { state.sBal -= amt; state.movs.push({date:dStr, source:'banca', type:'entrata', amt, cat:"🔙 Revoca Risparmio", tag:"ordinaria"}); }
-    else if(action==='cash_in') { 
-        state.movs.push({date:dStr, source:'banca', type:'uscita', amt, cat:"🏧 Prelievo"}); 
-        state.movs.push({date:dStr, source:'contanti', type:'entrata', amt, cat:"💵 Carico Cassa"}); 
-    }
+    else if(action==='cash_in') { state.movs.push({date:dStr, source:'banca', type:'uscita', amt, cat:"🏧 Prelievo"}); state.movs.push({date:dStr, source:'contanti', type:'entrata', amt, cat:"💵 Carico Cassa"}); }
     render();
   }
 
@@ -236,20 +254,11 @@
     });
   }
 
-  document.getElementById('movForm').onsubmit = e => {
-    e.preventDefault();
-    state.movs.push({ date: document.getElementById('mDate').value, source: document.getElementById('mSource').value, type: document.getElementById('mType').value, amt: Number(document.getElementById('mAmt').value), tag: document.getElementById('mTag').value, cat: document.getElementById('mCat').value });
-    render(); e.target.reset();
-  };
-  document.getElementById('budForm').onsubmit = e => {
-    e.preventDefault();
-    state.buds.push({ cat: document.getElementById('bCat').value, amt: Number(document.getElementById('bAmt').value), day: document.getElementById('bDay').value });
-    render(); e.target.reset();
-  };
-
+  document.getElementById('movForm').onsubmit = e => { e.preventDefault(); state.movs.push({ date: document.getElementById('mDate').value, source: document.getElementById('mSource').value, type: document.getElementById('mType').value, amt: Number(document.getElementById('mAmt').value), tag: document.getElementById('mTag').value, cat: document.getElementById('mCat').value }); render(); e.target.reset(); };
+  document.getElementById('budForm').onsubmit = e => { e.preventDefault(); state.buds.push({ cat: document.getElementById('bCat').value, amt: Number(document.getElementById('bAmt').value), day: document.getElementById('bDay').value }); render(); e.target.reset(); };
   function delM(i) { if(confirm("Eliminare?")) { state.movs.splice(i,1); render(); } }
   function delB(i) { if(confirm("Eliminare?")) { state.buds.splice(i,1); render(); } }
-  function exportData() { const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'executive_cashflow_v96.json'; a.click(); }
+  function exportData() { const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'executive_cashflow_v97.json'; a.click(); }
   function importData(e) { const r = new FileReader(); r.onload = x => { state = JSON.parse(x.target.result); render(); }; r.readAsText(e.target.files[0]); }
   loadData();
 </script>
