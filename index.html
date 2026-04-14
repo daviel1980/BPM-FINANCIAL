@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Executive Cashflow v93 - Full Control</title>
+  <title>Gestione Cashflow💵: Risparmi per vacanze e tempo libero</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -76,7 +76,7 @@
   <div id="alertBanner"></div>
 
   <div class="card">
-    <h2 class="section-title">Andamento Giornaliero Proiettato</h2>
+    <h2 class="section-title">Proiezione Giornaliera</h2>
     <canvas id="balanceChart" height="180"></canvas>
   </div>
 
@@ -84,33 +84,42 @@
     <h2 class="section-title">Nuova Registrazione</h2>
     <form id="movForm">
       <input type="date" id="mDate" required value="2026-04-15">
-      <div style="display:flex; gap:8px"><select id="mSource"><option value="banca">💳 Banca</option><option value="contanti">💵 Cassa</option></select><select id="mType"><option value="entrata">Entrata (+)</option><option value="uscita">Uscita (-)</option></select></div>
+      <div style="display:flex; gap:8px">
+          <select id="mSource"><option value="banca">💳 Banca</option><option value="contanti">💵 Cassa</option></select>
+          <select id="mType"><option value="entrata">Entrata (+)</option><option value="uscita">Uscita (-)</option></select>
+      </div>
       <select id="mTag">
           <option value="stipendio">💰 Stipendio (15 o 30)</option>
           <option value="inps">🏛️ Entrata INPS</option>
           <option value="ordinaria">Spesa Comune / Fissa</option>
           <option value="svago">🛍️ Svago / Shopping</option>
-          <option value="settimanale">📊 Spesa Settimanale Cumulata</option>
       </select>
       <input type="number" id="mAmt" step="0.01" placeholder="Importo €" required>
-      <input type="text" id="mCat" placeholder="Descrizione (es. Stipendio 15/04)" required>
-      <button type="submit" class="primary">REGISTRA MOVIMENTO</button>
+      <input type="text" id="mCat" placeholder="Descrizione" required>
+      <button type="submit" class="primary">REGISTRA</button>
     </form>
   </div>
 
   <div class="card">
     <h2 class="section-title">Pianificazione Fisse</h2>
-    <form id="budForm" style="display:flex; gap:5px"><input type="text" id="bCat" placeholder="Nome" required style="flex:2"><input type="number" id="bAmt" placeholder="€" required style="flex:1"><button type="submit" style="flex:1; background:var(--accent); color:white; border:none; border-radius:8px">+</button></form>
+    <form id="budForm">
+      <div style="display:flex; gap:8px">
+          <input type="text" id="bCat" placeholder="Nome (es. Mutuo)" required style="flex:2">
+          <input type="number" id="bAmt" placeholder="€" required style="flex:1">
+      </div>
+      <input type="number" id="bDay" placeholder="Giorno del mese in cui scade (1-31)" required min="1" max="31">
+      <button type="submit" class="primary">AGGIUNGI FISSA</button>
+    </form>
     <div id="budList" style="margin-top:0.8rem"></div>
   </div>
 
   <div class="card">
     <h2 class="section-title">Storico & Ricerca</h2>
-    <input type="text" id="searchInput" placeholder="Cerca movimento..." onkeyup="render()" style="margin-bottom:1rem">
+    <input type="text" id="searchInput" placeholder="Cerca..." onkeyup="render()" style="margin-bottom:1rem">
     <table class="table"><tbody id="rows"></tbody></table>
     <div style="display:flex; gap:8px; margin-top:1.5rem">
-      <button onclick="exportData()" style="background:#eee; font-size:0.75rem; font-weight:700; flex:1">SALVA BACKUP</button>
-      <button onclick="document.getElementById('importFile').click()" style="background:#eee; font-size:0.75rem; font-weight:700; flex:1">CARICA DATI</button>
+      <button onclick="exportData()" style="background:#eee; font-size:0.75rem; font-weight:700; flex:1">BACKUP</button>
+      <button onclick="document.getElementById('importFile').click()" style="background:#eee; font-size:0.75rem; font-weight:700; flex:1">IMPORTA</button>
     </div>
     <input type="file" id="importFile" style="display:none" onchange="importData(event)">
   </div>
@@ -122,17 +131,17 @@
   const fmt = n => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
   const fmtDate = d => d.split('-').reverse().join('/');
   
-  const CONFIG = { stipendio15: 1650, stipendio30: 1650, inpsGiorno: 15, inpsVal: 400 };
+  const CONFIG = { stip15: 1650, stip30: 1650, inpsVal: 400, inpsG: 15 };
 
   let state = { movs: [], buds: [], sBal: 0, alertLimit: 800 };
   let editingId = null; let editingBudId = null; let chart;
 
   function loadData() {
-    const saved = localStorage.getItem('bpm_v93');
+    const saved = localStorage.getItem('bpm_v94');
     if (saved) state = JSON.parse(saved);
     render();
   }
-  function saveData() { localStorage.setItem('bpm_v93', JSON.stringify(state)); }
+  function saveData() { localStorage.setItem('bpm_v94', JSON.stringify(state)); }
 
   function getCalculatedData() {
     const today = new Date();
@@ -140,26 +149,32 @@
     const curMonth = todayStr.slice(0,7);
     const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
     
+    // 1. Saldo Reale ad oggi
     const bancaBal = state.movs.filter(m => m.date <= todayStr && m.source === 'banca').reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
     const cashBal = state.movs.filter(m => m.source === 'contanti' && m.date <= todayStr).reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
     
+    // 2. Proiezione Giornaliera
     let dailyProjection = [];
     let runningBalance = bancaBal;
 
     for (let d = today.getDate(); d <= lastDay; d++) {
         const dStr = curMonth + "-" + String(d).padStart(2, '0');
+        
+        // Entrate/Uscite future registrate manualmente
         runningBalance += state.movs.filter(m => m.date === dStr && m.date > todayStr && m.source === 'banca' && m.type === 'entrata').reduce((s,m)=>s+m.amt, 0);
         runningBalance -= state.movs.filter(m => m.date === dStr && m.date > todayStr && m.source === 'banca' && m.type === 'uscita').reduce((s,m)=>s+m.amt, 0);
 
-        if (d === 15 && !state.movs.some(m => m.date.slice(0,7) === curMonth && m.date.includes('-15') && m.tag === 'stipendio')) runningBalance += CONFIG.stipendio15;
-        if (d === lastDay && !state.movs.some(m => m.date.slice(0,7) === curMonth && m.tag === 'stipendio' && (parseInt(m.date.slice(-2)) >= 28))) runningBalance += CONFIG.stipendio30;
-        if (d === CONFIG.inpsGiorno && !state.movs.some(m => m.date.slice(0,7) === curMonth && m.tag === 'inps')) runningBalance += CONFIG.inpsVal;
+        // Stipendi/INPS automatici (se non inseriti)
+        if (d === 15 && !state.movs.some(m => m.date.slice(0,7) === curMonth && m.date.includes('-15') && m.tag === 'stipendio')) runningBalance += CONFIG.stip15;
+        if (d === lastDay && !state.movs.some(m => m.date.slice(0,7) === curMonth && m.tag === 'stipendio' && parseInt(m.date.slice(-2)) >= 28)) runningBalance += CONFIG.stip30;
+        if (d === CONFIG.inpsG && !state.movs.some(m => m.date.slice(0,7) === curMonth && m.tag === 'inps')) runningBalance += CONFIG.inpsVal;
 
+        // Fisse pianificate (se non ancora pagate)
         state.buds.forEach(f => {
-            const fissaPagata = state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.toLowerCase().includes(f.cat.toLowerCase()));
-            const fissaGiorno = new Date(f.date).getDate() || 1;
-            if (d === fissaGiorno && !fissaPagata) runningBalance -= f.amt;
+            const pagata = state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.toLowerCase().includes(f.cat.toLowerCase()));
+            if (d === parseInt(f.day) && !pagata) runningBalance -= f.amt;
         });
+
         dailyProjection.push({ day: d, balance: runningBalance });
     }
 
@@ -186,11 +201,11 @@
     document.getElementById('budList').innerHTML = state.buds.map((f, i) => {
       const isEditing = editingBudId === i;
       return `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:#fff1f2; border-radius:12px; margin-bottom:6px; border-left:4px solid var(--out)">
-        <div style="flex:1">${isEditing ? `<input type="date" id="eb-date-${i}" class="edit-input" value="${f.date}"><input type="text" id="eb-cat-${i}" class="edit-input" style="margin-top:4px" value="${f.cat}">` : `<small>${fmtDate(f.date)}</small><br><b>${f.cat}</b>`}</div>
+        <div style="flex:1">${isEditing ? `<input type="text" id="eb-cat-${i}" class="edit-input" value="${f.cat}"><input type="number" id="eb-day-${i}" class="edit-input" style="margin-top:4px" value="${f.day}">` : `<b>${f.cat}</b><br><small>Giorno: ${f.day}</small>`}</div>
         <div style="text-align:right">${isEditing ? `<input type="number" id="eb-amt-${i}" class="edit-input" value="${f.amt}">` : `<b style="color:var(--out)">${fmt(f.amt)}</b>`}<button class="btn-icon" onclick="${isEditing ? `saveBud(${i})` : `toggleEditBud(${i})`}">${isEditing ? '💾' : '✏️'}</button><button class="btn-icon" onclick="delBud(${i})">🗑️</button></div></div>`;
     }).join('');
 
-    // Storico con MATITA
+    // Storico
     const filtered = state.movs.filter(m => m.cat.toLowerCase().includes(query) || m.amt.toString().includes(query));
     const sorted = [...filtered].sort((a,b) => new Date(b.date) - new Date(a.date));
     document.getElementById('rows').innerHTML = sorted.slice(0,15).map((m) => {
@@ -205,7 +220,7 @@
   function toggleEdit(i) { editingId = (editingId === i) ? null : i; render(); }
   function saveEdit(i) { state.movs[i].date = document.getElementById(`edit-date-${i}`).value; state.movs[i].cat = document.getElementById(`edit-cat-${i}`).value; state.movs[i].amt = Number(document.getElementById(`edit-amt-${i}`).value); editingId = null; render(); }
   function toggleEditBud(i) { editingBudId = (editingBudId === i) ? null : i; render(); }
-  function saveBud(i) { state.buds[i].date = document.getElementById(`eb-date-${i}`).value; state.buds[i].cat = document.getElementById(`eb-cat-${i}`).value; state.buds[i].amt = Number(document.getElementById(`eb-amt-${i}`).value); editingBudId = null; render(); }
+  function saveBud(i) { state.buds[i].cat = document.getElementById(`eb-cat-${i}`).value; state.buds[i].day = document.getElementById(`eb-day-${i}`).value; state.buds[i].amt = Number(document.getElementById(`eb-amt-${i}`).value); editingBudId = null; render(); }
 
   function updateChart(projection) {
     const ctx = document.getElementById('balanceChart').getContext('2d');
@@ -227,14 +242,12 @@
   };
   document.getElementById('budForm').onsubmit = e => {
     e.preventDefault();
-    const g = prompt("Giorno del mese scadenza (1-31):", "15");
-    const d = new Date(); d.setDate(parseInt(g));
-    state.buds.push({ cat: document.getElementById('bCat').value, amt: Number(document.getElementById('bAmt').value), date: d.toISOString().slice(0,10) });
+    state.buds.push({ cat: document.getElementById('bCat').value, amt: Number(document.getElementById('bAmt').value), day: document.getElementById('bDay').value });
     render(); e.target.reset();
   };
 
   function delM(i) { if(confirm("Eliminare?")) { state.movs.splice(i,1); render(); } }
-  function delBud(i) { if(confirm("Eliminare?")) { state.buds.splice(i,1); render(); } }
+  function delBud(i) { state.buds.splice(i,1); render(); }
   function manageFunds(action) {
     let amt = Number(prompt("Importo:")); if(!amt) return; const dStr = new Date().toISOString().slice(0,10);
     if(action==='save_in') { state.sBal += amt; state.movs.push({date:dStr, source:'banca', type:'uscita', amt, cat:"💎 Risparmio", tag:"ordinaria"}); }
@@ -243,17 +256,7 @@
     render();
   }
 
-  function showDetail(t) {
-    const d = getCalculatedData(); let title = "", body = "";
-    if(t==='banca') title = "Saldo Reale";
-    if(t==='gap') title = "Proiezione Fine Mese";
-    if(t==='varie') title = "Target Svago";
-    document.getElementById('modalTitle').innerHTML = title; 
-    document.getElementById('modalBody').innerHTML = "Dettaglio calcolato al " + new Date().toLocaleDateString();
-    document.getElementById('detailModal').style.display = 'flex';
-  }
-
-  function exportData() { const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'executive_cashflow_v93.json'; a.click(); }
+  function exportData() { const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'executive_cashflow_v94.json'; a.click(); }
   function importData(e) { const r = new FileReader(); r.onload = x => { state = JSON.parse(x.target.result); render(); }; r.readAsText(e.target.files[0]); }
   function closeModal() { document.getElementById('detailModal').style.display='none'; }
   loadData();
