@@ -13,7 +13,7 @@
     body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; padding: 0.5rem; }
     .container { max-width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 0.8rem; }
     
-    #thursdayBanner { display: none; background: #fef9c3; border: 2px solid #facc15; color: #854d0e; padding: 0.8rem; border-radius: 0.75rem; font-weight: 800; font-size: 0.75rem; text-align: center; margin-bottom: 0.2rem; animation: pulse 2s infinite; }
+    #thursdayBanner { display: none; background: #fef9c3; border: 2px solid #facc15; color: #854d0e; padding: 0.8rem; border-radius: 0.75rem; font-weight: 800; font-size: 0.75rem; text-align: center; animation: pulse 2s infinite; }
     @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.01); } 100% { transform: scale(1); } }
 
     .header-card { background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: white; padding: 1rem; border-radius: 1rem; text-align: center; }
@@ -50,8 +50,9 @@
     .money.out { color: var(--out); font-weight: 700; }
 
     .modal { display: none; position: fixed; z-index: 9999; left:0; top:0; width:100%; height:100%; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-    .modal-content { background: white; padding: 1.5rem; border-radius: 1.2rem; width: 85%; max-width: 400px; }
+    .modal-content { background: white; padding: 1.5rem; border-radius: 1.2rem; width: 85%; max-width: 450px; max-height: 80vh; overflow-y: auto; }
     
+    .detail-row { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 4px 0; border-bottom: 1px dashed #eee; }
     .btn-icon { background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 2px 6px; }
     .edit-input { font-size: 0.8rem; padding: 4px; border: 1px solid var(--save); border-radius: 4px; width: 100%; box-sizing: border-box; margin: 2px 0; }
   </style>
@@ -83,7 +84,7 @@
         <div class="gauge-wrapper">
             <div class="gauge-container"><canvas id="gaugeChart"></canvas></div>
             <div id="gaugeLabel">0%</div>
-            <div id="motivationText">Pronto all'uso.</div>
+            <div id="motivationText">Calcolo in corso...</div>
         </div>
     </div>
 
@@ -136,7 +137,6 @@
     let state = { movs: [], buds: [], sBal: 0, cashManual: 0 };
     let editingId = null; let editingBudId = null; let chart; let gaugeChart;
 
-    // CHIAVE UNIVERSALE PER IL CARICAMENTO
     function loadData() {
         const saved = localStorage.getItem('cashflow_master_data');
         if (saved) state = JSON.parse(saved);
@@ -150,20 +150,47 @@
         const todayStr = today.toISOString().slice(0,10);
         const curMonth = todayStr.slice(0,7);
         const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-        const bancaBal = state.movs.filter(m => m.date <= todayStr && m.source === 'banca').reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
+        
+        // Movimenti banca reali (fino a oggi)
+        const bancaMovs = state.movs.filter(m => m.date <= todayStr && m.source === 'banca');
+        const bancaBal = bancaMovs.reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
+        
         const cashBal = (state.cashManual !== 0 && state.cashManual !== undefined) ? state.cashManual : state.movs.filter(m => m.source === 'contanti' && m.date <= todayStr).reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
-        const spesoTempo = state.movs.filter(m => m.date.slice(0,7) === curMonth && (m.cat.toLowerCase().includes('svago') || m.cat.toLowerCase().includes('shopping'))).reduce((s, m) => s + m.amt, 0);
+        
+        const tempoMovs = state.movs.filter(m => m.date.slice(0,7) === curMonth && (m.cat.toLowerCase().includes('svago') || m.cat.toLowerCase().includes('shopping')));
+        const spesoTempo = tempoMovs.reduce((s, m) => s + m.amt, 0);
+
         let dailyProjection = []; let runningBalance = bancaBal; let totalExpected = bancaBal;
+        let missedBuds = []; let upcomingStips = 0;
+
         for (let d = today.getDate(); d <= lastDay; d++) {
             const dStr = curMonth + "-" + String(d).padStart(2, '0');
             runningBalance += state.movs.filter(m => m.date === dStr && m.date > todayStr && m.source === 'banca' && m.type === 'entrata').reduce((s,m)=>s+m.amt, 0);
             runningBalance -= state.movs.filter(m => m.date === dStr && m.date > todayStr && m.source === 'banca' && m.type === 'uscita').reduce((s,m)=>s+m.amt, 0);
-            if (d === 15 && !state.movs.some(m => m.date.slice(0,7) === curMonth && m.date.includes('-15'))) { runningBalance += CONFIG.stip15; totalExpected += CONFIG.stip15; }
-            if (d === lastDay && !state.movs.some(m => m.date.slice(0,7) === curMonth && parseInt(m.date.slice(-2)) >= 28)) { runningBalance += CONFIG.stip30; totalExpected += CONFIG.stip30; }
-            state.buds.forEach(f => { if (parseInt(f.day) === d && !state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.toLowerCase().includes(f.cat.toLowerCase()))) runningBalance -= f.amt; });
+            
+            if (d === 15 && !state.movs.some(m => m.date.slice(0,7) === curMonth && m.date.includes('-15'))) { 
+                runningBalance += CONFIG.stip15; totalExpected += CONFIG.stip15; upcomingStips += CONFIG.stip15;
+            }
+            if (d === lastDay && !state.movs.some(m => m.date.slice(0,7) === curMonth && parseInt(m.date.slice(-2)) >= 28)) { 
+                runningBalance += CONFIG.stip30; totalExpected += CONFIG.stip30; upcomingStips += CONFIG.stip30;
+            }
+            
+            state.buds.forEach(f => { 
+                if (parseInt(f.day) === d && !state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.toLowerCase().includes(f.cat.toLowerCase()))) {
+                    runningBalance -= f.amt;
+                    missedBuds.push(f);
+                }
+            });
             dailyProjection.push({ day: d, balance: runningBalance });
         }
-        return { bancaBal, cashBal, avail: dailyProjection.length > 0 ? dailyProjection[dailyProjection.length-1].balance : bancaBal, efficiency: totalExpected > 0 ? (runningBalance/totalExpected)*100 : 0, dailyProjection, residuoTempo: Math.max(0, 500 - spesoTempo), spesoTempo };
+        
+        return { 
+            bancaBal, bancaMovs, cashBal, 
+            avail: dailyProjection.length > 0 ? dailyProjection[dailyProjection.length-1].balance : bancaBal, 
+            efficiency: totalExpected > 0 ? (runningBalance/totalExpected)*100 : 0, 
+            dailyProjection, residuoTempo: Math.max(0, 500 - spesoTempo), spesoTempo, tempoMovs,
+            missedBuds, upcomingStips
+        };
     }
 
     function render() {
@@ -175,12 +202,14 @@
         document.getElementById('cashBal').textContent = fmt(d.cashBal);
         document.getElementById('tempoBal').textContent = fmt(d.residuoTempo);
         updateGauge(d.efficiency);
+
         document.getElementById('budList').innerHTML = state.buds.map((f, i) => {
             const isE = editingBudId === i;
             return `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:#fff; border:1px solid var(--border); border-radius:10px; border-left:4px solid var(--out)">
                 <div style="flex:1">${isE ? `<input type="text" id="eb-cat-${i}" class="edit-input" value="${f.cat}"><input type="number" id="eb-day-${i}" class="edit-input" value="${f.day}">` : `<b>${f.cat}</b><br><small>Gg: ${f.day}</small>`}</div>
                 <div style="text-align:right">${isE ? `<input type="number" id="eb-amt-${i}" class="edit-input" value="${f.amt}">` : `<b style="color:var(--out)">${fmt(f.amt)}</b>`}<div><button class="btn-icon" onclick="${isE ? `saveBud(${i})` : `toggleEditBud(${i})`}">${isE ? '💾' : '✏️'}</button><button class="btn-icon" onclick="delB(${i})">🗑️</button></div></div></div>`;
         }).join('');
+
         const filt = state.movs.filter(m => m.cat.toLowerCase().includes(q) || m.amt.toString().includes(q)).sort((a,b) => new Date(b.date) - new Date(a.date));
         document.getElementById('rows').innerHTML = filt.slice(0,12).map((m) => {
             const idx = state.movs.indexOf(m); const isE = editingId === idx;
@@ -191,21 +220,40 @@
         updateChart(d.dailyProjection); saveData();
     }
 
+    function showDetail(type) {
+        const d = getCalculatedData(); let t = "", b = "";
+        if(type==='banca') {
+            t="Riepilogo Saldo Reale";
+            b = `<div style="margin-bottom:10px">Saldo attuale: <b>${fmt(d.bancaBal)}</b></div>`;
+            b += d.bancaMovs.slice(-5).map(m => `<div class="detail-row"><span>${m.cat}</span><span class="${m.type}">${m.type==='entrata'?'+':'-'}${fmt(m.amt)}</span></div>`).join('');
+            b += `<small style="display:block; margin-top:10px">* Mostrati ultimi 5 movimenti banca</small>`;
+        }
+        else if(type==='gap') {
+            t="Calcolo Disponibile (GAP)";
+            b = `<div class="detail-row"><span>Saldo di partenza:</span><b>${fmt(d.bancaBal)}</b></div>`;
+            b += `<div class="detail-row" style="color:green"><span>Stipendi in arrivo:</span><b>+ ${fmt(d.upcomingStips)}</b></div>`;
+            d.missedBuds.forEach(f => {
+                b += `<div class="detail-row" style="color:red"><span>Fissa: ${f.cat}</span><b>- ${fmt(f.amt)}</b></div>`;
+            });
+            b += `<div style="margin-top:15px; border-top:2px solid #eee; padding-top:10px" class="detail-row"><span><b>TOTALE FINE MESE:</b></span><b>${fmt(d.avail)}</b></div>`;
+        }
+        else if(type==='tempo') {
+            t="Dettaglio Tempo Libero";
+            b = `<div class="detail-row"><span>Budget mensile:</span><b>${fmt(500)}</b></div>`;
+            b += d.tempoMovs.map(m => `<div class="detail-row"><span>${m.cat}</span><span style="color:red">-${fmt(m.amt)}</span></div>`).join('');
+            b += `<div style="margin-top:15px; border-top:2px solid #eee; padding-top:10px" class="detail-row"><span><b>RIMANENTE:</b></span><b>${fmt(d.residuoTempo)}</b></div>`;
+        }
+        else if(type==='risparmio') { t="Fondo Risparmio"; b=`Accantonato totale: <b>${fmt(state.sBal)}</b>.<br>Questo fondo è escluso dal calcolo del GAP quotidiano.`; }
+        else if(type==='cassa') { t="Contanti"; b=`Saldo portafoglio stimato: <b>${fmt(d.cashBal)}</b>.`; }
+
+        document.getElementById('modalTitle').innerText = t; document.getElementById('modalBody').innerHTML = b; document.getElementById('detailModal').style.display = 'flex';
+    }
+
     function updateGauge(val) {
         const ctx = document.getElementById('gaugeChart').getContext('2d'); if(gaugeChart) gaugeChart.destroy();
         document.getElementById('gaugeLabel').textContent = `${Math.round(val)}%`;
         document.getElementById('motivationText').textContent = val > 20 ? "🏖️ Avanti così per le vacanze!" : "🧗 Forza! Il risparmio cresce.";
         gaugeChart = new Chart(ctx, { type: 'doughnut', data: { datasets: [{ data: [val, 100 - val], backgroundColor: [val > 25 ? '#10b981' : '#f59e0b', '#e2e8f0'], borderWidth: 0, circumference: 180, rotation: 270, cutout: '80%' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
-    }
-
-    function showDetail(type) {
-        const d = getCalculatedData(); let t = "", b = "";
-        if(type==='gap') { t="Disponibile (GAP)"; b=`Liquidità stimata a fine mese: <b>${fmt(d.avail)}</b>.<br>Include stipendi e sottrae bollette non ancora pagate.`; }
-        else if(type==='tempo') { t="Target Tempo Libero"; b=`Hai speso <b>${fmt(d.spesoTempo)}</b> su 500€ totali questo mese.<br>Residuo utilizzabile: <b>${fmt(d.residuoTempo)}</b>.`; }
-        else if(type==='risparmio') { t="Fondo Risparmio"; b=`Accantonato: <b>${fmt(state.sBal)}</b>`; }
-        else if(type==='banca') { t="Saldo Banca"; b=`Saldo reale oggi sul conto corrente: <b>${fmt(d.bancaBal)}</b>.`; }
-        else if(type==='cassa') { t="Contanti"; b=`Saldo portafoglio: <b>${fmt(d.cashBal)}</b>`; }
-        document.getElementById('modalTitle').innerText = t; document.getElementById('modalBody').innerHTML = b; document.getElementById('detailModal').style.display = 'flex';
     }
 
     function closeModal() { document.getElementById('detailModal').style.display = 'none'; }
