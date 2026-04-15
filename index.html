@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Gestione Cashflow per Vacanze e Tempo libero v113</title>
+  <title>Gestione Cashflow per Vacanze e Tempo libero</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -20,16 +20,16 @@
     .title { margin: 0; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; }
 
     .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
-    .stat-card { background: var(--card); padding: 0.9rem; border-radius: 0.8rem; border: 1px solid var(--border); cursor: pointer; position: relative; }
-    .stat-label { font-size: 0.55rem; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 3px; display: block; }
-    .stat-value { font-size: 1.05rem; font-weight: 800; }
+    .stat-card { background: var(--card); padding: 0.9rem; border-radius: 0.8rem; border: 1px solid var(--border); cursor: pointer; position: relative; z-index: 10; }
+    .stat-label { font-size: 0.55rem; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 3px; display: block; pointer-events: none; }
+    .stat-value { font-size: 1.05rem; font-weight: 800; pointer-events: none; }
     
     .border-banca { border-left: 5px solid var(--in); }
     .border-disp { border-left: 5px solid var(--varie); background: #fdf2ff; }
     .border-save { border-left: 5px solid var(--save); }
     .border-cash { border-left: 5px solid var(--cash); }
 
-    .quick-actions { display: flex; gap: 4px; position: absolute; top: 6px; right: 6px; }
+    .quick-actions { display: flex; gap: 4px; position: absolute; top: 6px; right: 6px; z-index: 20; }
     .btn-small { background: #fff; border: 1px solid var(--border); padding: 2px 6px; font-size: 0.6rem; border-radius: 4px; cursor: pointer; font-weight: 800; }
     
     .card { background: var(--card); padding: 1rem; border-radius: 1rem; border: 1px solid var(--border); }
@@ -48,8 +48,10 @@
     .money.in { color: var(--in); font-weight: 700; }
     .money.out { color: var(--out); font-weight: 700; }
 
-    .modal { display: none; position: fixed; z-index: 1000; left:0; top:0; width:100%; height:100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-    .modal-content { background: white; padding: 1.5rem; border-radius: 1.2rem; width: 92%; max-height: 85vh; overflow-y: auto; }
+    /* Fix Modal Visibility */
+    .modal { display: none; position: fixed; z-index: 9999; left:0; top:0; width:100%; height:100%; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+    .modal-content { background: white; padding: 1.5rem; border-radius: 1.2rem; width: 85%; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); }
+    
     .btn-icon { background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 2px 6px; }
     .edit-input { font-size: 0.8rem; padding: 4px; border: 1px solid var(--save); border-radius: 4px; width: 100%; box-sizing: border-box; margin: 2px 0; }
   </style>
@@ -58,7 +60,7 @@
 
 <div class="container">
     <div id="thursdayBanner">É Giovedì, forza un piccolo sforzo per il target vacanze, aggiornate il saldo reale 🏖️</div>
-    <div class="header-card"><h1 class="title">Gestione Cashflow per Vacanze e Tempo libero v113</h1></div>
+    <div class="header-card"><h1 class="title">Gestione Cashflow per Vacanze e Tempo libero</h1></div>
 
     <div class="stats-grid">
         <div class="stat-card border-banca" onclick="showDetail('banca')"><span class="stat-label">SALDO REALE 💳</span><div id="actBal" class="stat-value">0 €</div></div>
@@ -115,7 +117,13 @@
     </div>
 </div>
 
-<div id="detailModal" class="modal" onclick="closeModal()"><div class="modal-content" onclick="event.stopPropagation()"><h3 id="modalTitle"></h3><div id="modalBody"></div><button onclick="closeModal()" class="primary" style="margin-top:1.5rem">CHIUDI</button></div></div>
+<div id="detailModal" class="modal" onclick="closeModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h3 id="modalTitle" style="color:var(--accent); margin-top:0;"></h3>
+        <div id="modalBody" style="line-height:1.6; font-size:0.95rem;"></div>
+        <button onclick="closeModal()" class="primary" style="margin-top:1.5rem; margin-bottom:0;">CHIUDI</button>
+    </div>
+</div>
 
 <script>
     const fmt = n => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
@@ -126,12 +134,12 @@
     let editingId = null; let editingBudId = null; let chart; let gaugeChart;
 
     function loadData() {
-        const saved = localStorage.getItem('bpm_v113');
+        const saved = localStorage.getItem('bpm_final');
         if (saved) state = JSON.parse(saved);
         if(new Date().getDay() === 4) document.getElementById('thursdayBanner').style.display = 'block';
         render();
     }
-    function saveData() { localStorage.setItem('bpm_v113', JSON.stringify(state)); }
+    function saveData() { localStorage.setItem('bpm_final', JSON.stringify(state)); }
 
     function getCalculatedData() {
         const today = new Date();
@@ -186,15 +194,18 @@
 
     function showDetail(type) {
         const d = getCalculatedData(); let t = "", b = "";
-        if(type==='gap') { t="Disponibile GAP"; b=`Liquidità stimata a fine mese: <b>${fmt(d.avail)}</b>.`; }
-        else if(type==='risparmio') { t="Fondo Risparmio"; b=`Accantonato: <b>${fmt(state.sBal)}</b>`; }
-        else if(type==='banca') { t="Banca"; b="Saldo reale sul conto oggi."; }
-        else if(type==='cassa') { t="Contanti"; b=`Portafoglio: <b>${fmt(d.cashBal)}</b>`; }
-        document.getElementById('modalTitle').innerHTML = t; document.getElementById('modalBody').innerHTML = b; document.getElementById('detailModal').style.display = 'flex';
+        if(type==='gap') { t="Disponibile GAP"; b=`La liquidità stimata a fine mese è di <b>${fmt(d.avail)}</b>. Questo valore tiene conto di tutte le spese fisse e gli stipendi mancanti.`; }
+        else if(type==='risparmio') { t="Fondo Risparmio"; b=`Hai attualmente accantonato un totale di <b>${fmt(state.sBal)}</b> nel tuo fondo dedicato.`; }
+        else if(type==='banca') { t="Saldo Banca"; b=`Questo è il saldo reale attuale presente sul tuo conto corrente: <b>${fmt(d.bancaBal)}</b>.`; }
+        else if(type==='cassa') { t="Saldo Contanti"; b=`Nel tuo portafoglio dovresti avere fisicamente: <b>${fmt(d.cashBal)}</b>.`; }
+        
+        document.getElementById('modalTitle').innerText = t; 
+        document.getElementById('modalBody').innerHTML = b; 
+        document.getElementById('detailModal').style.display = 'flex';
     }
 
-    function editManualBalance(type) { if(type==='save'){const n=prompt("Risparmio:",state.sBal); if(n!==null)state.sBal=Number(n);} else{const n=prompt("Contante:",getCalculatedData().cashBal); if(n!==null)state.cashManual=Number(n);} render(); }
     function closeModal() { document.getElementById('detailModal').style.display = 'none'; }
+    function editManualBalance(type) { if(type==='save'){const n=prompt("Imposta Risparmio:",state.sBal); if(n!==null)state.sBal=Number(n);} else{const n=prompt("Imposta Contante:",getCalculatedData().cashBal); if(n!==null)state.cashManual=Number(n);} render(); }
     function toggleEdit(i) { editingId = (editingId === i) ? null : i; render(); }
     function saveEdit(i) { state.movs[i].date = document.getElementById(`ed-${i}`).value; state.movs[i].cat = document.getElementById(`ec-${i}`).value; state.movs[i].amt = Number(document.getElementById(`ea-${i}`).value); editingId = null; render(); }
     function toggleEditBud(i) { editingBudId = (editingBudId === i) ? null : i; render(); }
@@ -210,7 +221,7 @@
     document.getElementById('budForm').onsubmit = e => { e.preventDefault(); state.buds.push({ cat: document.getElementById('bCat').value, amt: Number(document.getElementById('bAmt').value), day: document.getElementById('bDay').value }); render(); e.target.reset(); };
     function delB(i) { if(confirm("Eliminare?")) { state.buds.splice(i,1); render(); } }
     
-    function exportData() { const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'gestione_cashflow_vacanze_v113.json'; a.click(); }
+    function exportData() { const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'gestione_cashflow_vacanze.json'; a.click(); }
     function importData(e) { const r = new FileReader(); r.onload = x => { state = JSON.parse(x.target.result); render(); }; r.readAsText(e.target.files[0]); }
     loadData();
 </script>
