@@ -52,7 +52,7 @@
     .modal { display: none; position: fixed; z-index: 9999; left:0; top:0; width:100%; height:100%; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; backdrop-filter: blur(4px); }
     .modal-content { background: white; padding: 1.5rem; border-radius: 1.2rem; width: 85%; max-width: 450px; max-height: 80vh; overflow-y: auto; }
     
-    .detail-row { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 4px 0; border-bottom: 1px dashed #eee; }
+    .detail-row { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 6px 0; border-bottom: 1px dashed #eee; }
     .btn-icon { background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 2px 6px; }
     .edit-input { font-size: 0.8rem; padding: 4px; border: 1px solid var(--save); border-radius: 4px; width: 100%; box-sizing: border-box; margin: 2px 0; }
   </style>
@@ -84,7 +84,7 @@
         <div class="gauge-wrapper">
             <div class="gauge-container"><canvas id="gaugeChart"></canvas></div>
             <div id="gaugeLabel">0%</div>
-            <div id="motivationText">Calcolo in corso...</div>
+            <div id="motivationText">...</div>
         </div>
     </div>
 
@@ -102,9 +102,19 @@
         <h2 class="section-title">Registra Movimento</h2>
         <form id="movForm">
             <input type="date" id="mDate" required value="2026-04-16">
-            <div style="display:flex; gap:8px"><select id="mSource"><option value="banca">💳 Banca</option><option value="contanti">💵 Cassa</option></select><select id="mType"><option value="uscita">Uscita</option><option value="entrata">Entrata</option></select></div>
+            <div style="display:flex; gap:8px">
+                <select id="mSource"><option value="banca">💳 Banca</option><option value="contanti">💵 Cassa</option></select>
+                <select id="mType"><option value="uscita">Uscita</option><option value="entrata">Entrata</option></select>
+            </div>
+            <select id="mTag">
+                <option value="ordinaria">Spesa Comune / Fissa</option>
+                <option value="stipendio">💰 Stipendio (15 o 30)</option>
+                <option value="inps">🏛️ Entrata INPS</option>
+                <option value="svago">🛍️ Svago / Shopping</option>
+                <option value="settimanale">📊 Spesa Settimanale</option>
+            </select>
             <input type="number" id="mAmt" step="0.01" placeholder="Importo €" required>
-            <input type="text" id="mCat" placeholder="Descrizione (usa 'svago' per il target)" required>
+            <input type="text" id="mCat" placeholder="Descrizione" required>
             <button type="submit" class="primary">AGGIUNGI</button>
         </form>
     </div>
@@ -114,8 +124,8 @@
         <input type="text" id="searchInput" placeholder="Cerca descrizione o importo..." onkeyup="render()" style="margin-bottom:0.8rem">
         <table class="table"><tbody id="rows"></tbody></table>
         <div style="display:flex; gap:8px; margin-top:1rem">
-            <button onclick="exportData()" style="background:#eee; font-size:0.7rem; font-weight:700; flex:1">BACKUP</button>
-            <button onclick="document.getElementById('importFile').click()" style="background:#eee; font-size:0.7rem; font-weight:700; flex:1">IMPORTA</button>
+            <button onclick="exportData()" style="background:#eee; font-size:0.75rem; font-weight:700; flex:1">BACKUP</button>
+            <button onclick="document.getElementById('importFile').click()" style="background:#eee; font-size:0.75rem; font-weight:700; flex:1">IMPORTA</button>
         </div>
         <input type="file" id="importFile" style="display:none" onchange="importData(event)">
     </div>
@@ -124,7 +134,7 @@
 <div id="detailModal" class="modal" onclick="closeModal()">
     <div class="modal-content" onclick="event.stopPropagation()">
         <h3 id="modalTitle" style="color:var(--accent); margin-top:0;"></h3>
-        <div id="modalBody" style="line-height:1.6; font-size:0.95rem;"></div>
+        <div id="modalBody"></div>
         <button onclick="closeModal()" class="primary" style="margin-top:1.5rem;">CHIUDI</button>
     </div>
 </div>
@@ -151,34 +161,37 @@
         const curMonth = todayStr.slice(0,7);
         const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
         
-        // Movimenti banca reali (fino a oggi)
         const bancaMovs = state.movs.filter(m => m.date <= todayStr && m.source === 'banca');
         const bancaBal = bancaMovs.reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
-        
         const cashBal = (state.cashManual !== 0 && state.cashManual !== undefined) ? state.cashManual : state.movs.filter(m => m.source === 'contanti' && m.date <= todayStr).reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
         
-        const tempoMovs = state.movs.filter(m => m.date.slice(0,7) === curMonth && (m.cat.toLowerCase().includes('svago') || m.cat.toLowerCase().includes('shopping')));
+        const tempoMovs = state.movs.filter(m => m.date.slice(0,7) === curMonth && (m.tag === 'svago' || m.cat.toLowerCase().includes('svago')));
         const spesoTempo = tempoMovs.reduce((s, m) => s + m.amt, 0);
 
         let dailyProjection = []; let runningBalance = bancaBal; let totalExpected = bancaBal;
-        let missedBuds = []; let upcomingStips = 0;
+        let missedBuds = []; let futureIn = 0; let futureOut = 0;
 
         for (let d = today.getDate(); d <= lastDay; d++) {
             const dStr = curMonth + "-" + String(d).padStart(2, '0');
-            runningBalance += state.movs.filter(m => m.date === dStr && m.date > todayStr && m.source === 'banca' && m.type === 'entrata').reduce((s,m)=>s+m.amt, 0);
-            runningBalance -= state.movs.filter(m => m.date === dStr && m.date > todayStr && m.source === 'banca' && m.type === 'uscita').reduce((s,m)=>s+m.amt, 0);
             
-            if (d === 15 && !state.movs.some(m => m.date.slice(0,7) === curMonth && m.date.includes('-15'))) { 
-                runningBalance += CONFIG.stip15; totalExpected += CONFIG.stip15; upcomingStips += CONFIG.stip15;
+            // Movimenti futuri già a storico
+            const fIn = state.movs.filter(m => m.date === dStr && m.date > todayStr && m.source === 'banca' && m.type === 'entrata').reduce((s,m)=>s+m.amt, 0);
+            const fOut = state.movs.filter(m => m.date === dStr && m.date > todayStr && m.source === 'banca' && m.type === 'uscita').reduce((s,m)=>s+m.amt, 0);
+            runningBalance += (fIn - fOut);
+            futureIn += fIn; futureOut += fOut;
+
+            // Stipendi teorici
+            if (d === 15 && !state.movs.some(m => m.date.slice(0,7) === curMonth && m.date.includes('-15') && m.tag === 'stipendio')) { 
+                runningBalance += CONFIG.stip15; totalExpected += CONFIG.stip15; futureIn += CONFIG.stip15;
             }
-            if (d === lastDay && !state.movs.some(m => m.date.slice(0,7) === curMonth && parseInt(m.date.slice(-2)) >= 28)) { 
-                runningBalance += CONFIG.stip30; totalExpected += CONFIG.stip30; upcomingStips += CONFIG.stip30;
+            if (d === lastDay && !state.movs.some(m => m.date.slice(0,7) === curMonth && parseInt(m.date.slice(-2)) >= 28 && m.tag === 'stipendio')) { 
+                runningBalance += CONFIG.stip30; totalExpected += CONFIG.stip30; futureIn += CONFIG.stip30;
             }
             
+            // Fisse mancanti
             state.buds.forEach(f => { 
                 if (parseInt(f.day) === d && !state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.toLowerCase().includes(f.cat.toLowerCase()))) {
-                    runningBalance -= f.amt;
-                    missedBuds.push(f);
+                    runningBalance -= f.amt; missedBuds.push(f);
                 }
             });
             dailyProjection.push({ day: d, balance: runningBalance });
@@ -189,7 +202,7 @@
             avail: dailyProjection.length > 0 ? dailyProjection[dailyProjection.length-1].balance : bancaBal, 
             efficiency: totalExpected > 0 ? (runningBalance/totalExpected)*100 : 0, 
             dailyProjection, residuoTempo: Math.max(0, 500 - spesoTempo), spesoTempo, tempoMovs,
-            missedBuds, upcomingStips
+            missedBuds, futureIn, futureOut
         };
     }
 
@@ -222,30 +235,23 @@
 
     function showDetail(type) {
         const d = getCalculatedData(); let t = "", b = "";
-        if(type==='banca') {
-            t="Riepilogo Saldo Reale";
-            b = `<div style="margin-bottom:10px">Saldo attuale: <b>${fmt(d.bancaBal)}</b></div>`;
-            b += d.bancaMovs.slice(-5).map(m => `<div class="detail-row"><span>${m.cat}</span><span class="${m.type}">${m.type==='entrata'?'+':'-'}${fmt(m.amt)}</span></div>`).join('');
-            b += `<small style="display:block; margin-top:10px">* Mostrati ultimi 5 movimenti banca</small>`;
-        }
-        else if(type==='gap') {
-            t="Calcolo Disponibile (GAP)";
-            b = `<div class="detail-row"><span>Saldo di partenza:</span><b>${fmt(d.bancaBal)}</b></div>`;
-            b += `<div class="detail-row" style="color:green"><span>Stipendi in arrivo:</span><b>+ ${fmt(d.upcomingStips)}</b></div>`;
-            d.missedBuds.forEach(f => {
-                b += `<div class="detail-row" style="color:red"><span>Fissa: ${f.cat}</span><b>- ${fmt(f.amt)}</b></div>`;
-            });
-            b += `<div style="margin-top:15px; border-top:2px solid #eee; padding-top:10px" class="detail-row"><span><b>TOTALE FINE MESE:</b></span><b>${fmt(d.avail)}</b></div>`;
+        if(type==='gap') {
+            t="Analisi Disponibile (GAP)";
+            b = `<div class="detail-row"><span>Saldo banca oggi:</span><b>${fmt(d.bancaBal)}</b></div>`;
+            b += `<div class="detail-row" style="color:green"><span>Entrate future (stipendi/INPS):</span><b>+ ${fmt(d.futureIn)}</b></div>`;
+            d.missedBuds.forEach(f => { b += `<div class="detail-row" style="color:red"><span>Fissa: ${f.cat}</span><b>- ${fmt(f.amt)}</b></div>`; });
+            if(d.futureOut > 0) b += `<div class="detail-row" style="color:red"><span>Altre uscite a storico:</span><b>- ${fmt(d.futureOut)}</b></div>`;
+            b += `<div style="margin-top:15px; border-top:2px solid #eee; padding-top:10px" class="detail-row"><span><b>DISPONIBILE FINE MESE:</b></span><b>${fmt(d.avail)}</b></div>`;
         }
         else if(type==='tempo') {
-            t="Dettaglio Tempo Libero";
+            t="Target Tempo Libero";
             b = `<div class="detail-row"><span>Budget mensile:</span><b>${fmt(500)}</b></div>`;
             b += d.tempoMovs.map(m => `<div class="detail-row"><span>${m.cat}</span><span style="color:red">-${fmt(m.amt)}</span></div>`).join('');
             b += `<div style="margin-top:15px; border-top:2px solid #eee; padding-top:10px" class="detail-row"><span><b>RIMANENTE:</b></span><b>${fmt(d.residuoTempo)}</b></div>`;
         }
-        else if(type==='risparmio') { t="Fondo Risparmio"; b=`Accantonato totale: <b>${fmt(state.sBal)}</b>.<br>Questo fondo è escluso dal calcolo del GAP quotidiano.`; }
+        else if(type==='banca') { t="Saldo Reale"; b=`Somma movimenti banca registrati fino ad oggi: <b>${fmt(d.bancaBal)}</b>.`; }
+        else if(type==='risparmio') { t="Fondo Risparmio"; b=`Totale protetto: <b>${fmt(state.sBal)}</b>.<br>Questo importo non è calcolato nel GAP per le bollette.`; }
         else if(type==='cassa') { t="Contanti"; b=`Saldo portafoglio stimato: <b>${fmt(d.cashBal)}</b>.`; }
-
         document.getElementById('modalTitle').innerText = t; document.getElementById('modalBody').innerHTML = b; document.getElementById('detailModal').style.display = 'flex';
     }
 
@@ -264,14 +270,14 @@
     function saveBud(i) { state.buds[i].cat = document.getElementById(`eb-cat-${i}`).value; state.buds[i].day = document.getElementById(`eb-day-${i}`).value; state.buds[i].amt = Number(document.getElementById(`eb-amt-${i}`).value); editingBudId = null; render(); }
     function delM(i) { if(confirm("Eliminare movimento?")) { state.movs.splice(i,1); render(); } }
     function delB(i) { if(confirm("Eliminare fissa?")) { state.buds.splice(i,1); render(); } }
-    function manageFunds(action) { let amt = Number(prompt("Importo €:")); if(!amt) return; const dStr = new Date().toISOString().slice(0,10); if(action==='save_in') { state.sBal += amt; state.movs.push({date:dStr, source:'banca', type:'uscita', amt, cat:"💎 Risparmio"}); } else { state.movs.push({date:dStr, source:'banca', type:'uscita', amt, cat:"🏧 Prelievo"}); state.movs.push({date:dStr, source:'contanti', type:'entrata', amt, cat:"💵 Carico"}); } render(); }
+    function manageFunds(action) { let amt = Number(prompt("Importo €:")); if(!amt) return; const dStr = new Date().toISOString().slice(0,10); if(action==='save_in') { state.sBal += amt; state.movs.push({date:dStr, source:'banca', type:'uscita', amt, cat:"💎 Risparmio", tag:"ordinaria"}); } else { state.movs.push({date:dStr, source:'banca', type:'uscita', amt, cat:"🏧 Prelievo", tag:"ordinaria"}); state.movs.push({date:dStr, source:'contanti', type:'entrata', amt, cat:"💵 Carico", tag:"ordinaria"}); } render(); }
 
     function updateChart(projection) {
         const ctx = document.getElementById('balanceChart').getContext('2d'); if(chart) chart.destroy();
         chart = new Chart(ctx, { type: 'line', data: { labels: projection.map(p => p.day), datasets: [{ data: projection.map(p => p.balance), borderColor: '#01696f', fill: true, backgroundColor: 'rgba(1, 105, 92, 0.05)', tension: 0.3 }, { data: Array(projection.length).fill(800), borderColor: 'red', borderDash: [5,5], pointRadius: 0 }] }, options: { responsive: true, plugins: { legend: { display: false } } } });
     }
 
-    document.getElementById('movForm').onsubmit = e => { e.preventDefault(); state.movs.push({ date: document.getElementById('mDate').value, source: document.getElementById('mSource').value, type: document.getElementById('mType').value, amt: Number(document.getElementById('mAmt').value), cat: document.getElementById('mCat').value }); render(); e.target.reset(); };
+    document.getElementById('movForm').onsubmit = e => { e.preventDefault(); state.movs.push({ date: document.getElementById('mDate').value, source: document.getElementById('mSource').value, type: document.getElementById('mType').value, amt: Number(document.getElementById('mAmt').value), tag: document.getElementById('mTag').value, cat: document.getElementById('mCat').value }); render(); e.target.reset(); };
     document.getElementById('budForm').onsubmit = e => { e.preventDefault(); state.buds.push({ cat: document.getElementById('bCat').value, amt: Number(document.getElementById('bAmt').value), day: document.getElementById('bDay').value }); render(); e.target.reset(); };
     
     function exportData() { const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'gestione_cashflow_vacanze.json'; a.click(); }
