@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Executive Cashflow v105 - Global Control</title>
+  <title>Executive Cashflow v106 - Target Vacanze 🏖️</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -32,6 +32,10 @@
     .card { background: var(--card); padding: 1.2rem; border-radius: 1rem; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
     .section-title { margin: 0 0 1rem 0; font-size: 0.85rem; font-weight: 800; color: var(--accent); text-transform: uppercase; border-left: 4px solid var(--accent); padding-left: 8px; }
 
+    .gauge-container { text-align: center; padding: 10px 0; }
+    #gaugeLabel { font-size: 0.8rem; font-weight: 700; margin-top: 5px; color: var(--accent); }
+    #motivationText { font-size: 0.75rem; font-style: italic; color: #64748b; margin-top: 8px; min-height: 2.5em; padding: 0 10px; }
+
     input, select, button { border-radius: 0.6rem; border: 1px solid var(--border); padding: 0.7rem; font-size: 0.9rem; width: 100%; margin-bottom: 0.5rem; box-sizing: border-box; }
     button.primary { background: var(--accent); color: white; border: none; font-weight: 800; cursor: pointer; }
     
@@ -52,7 +56,7 @@
 
 <div class="container">
   <div class="header-card">
-    <h1 class="title">Gestione Cashflow💵:<br>Risparmi e Tempo Libero</h1>
+    <h1 class="title">Gestione Cashflow💵:<br>Smart Budget & Target Vacanze</h1>
   </div>
 
   <div class="stats-grid">
@@ -74,15 +78,20 @@
       </div>
       <span class="stat-label">CONTANTE 💵</span><div id="cashBal" class="stat-value">0 €</div>
     </div>
-
-    <div class="stat-card full-width" style="border-left: 5px solid var(--varie); background: #fdf2ff;" onclick="showDetail('shopping')">
-      <span class="stat-label">TARGET SHOPPING (500€/MESE) 🛍️</span><div id="varieBal" class="stat-value">0 €</div>
-    </div>
   </div>
 
   <div id="alertBanner"></div>
 
-  <div class="card"><h2 class="section-title">Andamento Giornaliero Proiettato</h2><canvas id="balanceChart" height="180"></canvas></div>
+  <div class="card">
+    <h2 class="section-title">Efficienza Risparmio Vacanze 🏖️</h2>
+    <div class="gauge-container">
+        <canvas id="gaugeChart" height="120"></canvas>
+        <div id="gaugeLabel">Efficienza: 0%</div>
+        <div id="motivationText">"Ogni euro risparmiato è un tuffo in più nel blu!"</div>
+    </div>
+  </div>
+
+  <div class="card"><h2 class="section-title">Andamento Giornaliero</h2><canvas id="balanceChart" height="180"></canvas></div>
 
   <div class="card">
     <h2 class="section-title">Nuova Registrazione</h2>
@@ -98,14 +107,14 @@
       </select>
       <input type="number" id="mAmt" step="0.01" placeholder="Importo €" required>
       <input type="text" id="mCat" placeholder="Descrizione" required>
-      <button type="submit" class="primary">SALVA</button>
+      <button type="submit" class="primary">REGISTRA</button>
     </form>
   </div>
 
   <div class="card">
-    <h2 class="section-title">Pianificazione Fisse (Mensili)</h2>
+    <h2 class="section-title">Pianificazione Fisse</h2>
     <form id="budForm" style="display:flex; gap:5px; margin-bottom:1rem">
-        <input type="text" id="bCat" placeholder="Nome" required style="flex:2"><input type="number" id="bAmt" placeholder="€" required style="flex:1"><input type="number" id="bDay" placeholder="GG" required min="1" max="31" style="flex:0.6"><button type="submit" style="flex:0.6; background:var(--accent); color:white; border:none; border-radius:8px; font-weight:800">+</button>
+        <input type="text" id="bCat" placeholder="Nome" required style="flex:2"><input type="number" id="bAmt" placeholder="€" required style="flex:1"><input type="number" id="bDay" placeholder="GG" required min="1" max="31" style="flex:0.6"><button type="submit" style="flex:0.6; background:var(--accent); color:white; border:none; border-radius:8px">+</button>
     </form>
     <div id="budList" style="display: flex; flex-direction: column; gap: 6px;"></div>
   </div>
@@ -130,14 +139,14 @@
   const CONFIG = { stip15: 1650, stip30: 1650, inpsVal: 400, inpsG: 15 };
 
   let state = { movs: [], buds: [], sBal: 0, cashManual: 0 };
-  let editingId = null; let editingBudId = null; let chart;
+  let editingId = null; let editingBudId = null; let chart; let gaugeChart;
 
   function loadData() {
-    const saved = localStorage.getItem('bpm_v105');
+    const saved = localStorage.getItem('bpm_v106');
     if (saved) state = JSON.parse(saved);
     render();
   }
-  function saveData() { localStorage.setItem('bpm_v105', JSON.stringify(state)); }
+  function saveData() { localStorage.setItem('bpm_v106', JSON.stringify(state)); }
 
   function getCalculatedData() {
     const today = new Date();
@@ -145,43 +154,34 @@
     const curMonth = todayStr.slice(0,7);
     const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
     
-    // 1. Saldo Reale (Movimenti effettivamente accaduti ad oggi)
     const bancaBal = state.movs.filter(m => m.date <= todayStr && m.source === 'banca').reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
     const cashCalc = state.movs.filter(m => m.source === 'contanti' && m.date <= todayStr).reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
     const cashBal = (state.cashManual !== 0 && state.cashManual !== undefined) ? state.cashManual : cashCalc;
 
-    // 2. Proiezione Disponibile (Tutto ciò che accadrà da oggi al 30)
     let dailyProjection = [];
     let runningBalance = bancaBal;
     let missingStipends = [];
     let missingFisse = [];
-    let futureMovements = [];
+    let totalExpectedIn = bancaBal; // Per calcolo efficienza
 
     for (let d = today.getDate(); d <= lastDay; d++) {
         const dStr = curMonth + "-" + String(d).padStart(2, '0');
-        
-        // Movimenti manuali a data FUTURA nello storico
-        const fIn = state.movs.filter(m => m.date === dStr && m.date > todayStr && m.source === 'banca' && m.type === 'entrata');
-        const fOut = state.movs.filter(m => m.date === dStr && m.date > todayStr && m.source === 'banca' && m.type === 'uscita');
-        
-        fIn.forEach(m => { runningBalance += m.amt; if(d === today.getDate()) futureMovements.push({name: m.cat, amt: m.amt, type: 'in'}); });
-        fOut.forEach(m => { runningBalance -= m.amt; futureMovements.push({name: m.cat, amt: m.amt, type: 'out', day: d}); });
+        runningBalance += state.movs.filter(m => m.date === dStr && m.date > todayStr && m.source === 'banca' && m.type === 'entrata').reduce((s,m)=>s+m.amt, 0);
+        runningBalance -= state.movs.filter(m => m.date === dStr && m.date > todayStr && m.source === 'banca' && m.type === 'uscita').reduce((s,m)=>s+m.amt, 0);
 
-        // Stipendi teorici (solo se non ricevuti nel mese)
         if (d === 15 && !state.movs.some(m => m.date.slice(0,7) === curMonth && m.date.includes('-15') && m.tag === 'stipendio')) {
-            runningBalance += CONFIG.stip15;
+            runningBalance += CONFIG.stip15; totalExpectedIn += CONFIG.stip15;
             missingStipends.push({name: "Stipendio 15", amt: CONFIG.stip15});
         }
         if (d === lastDay && !state.movs.some(m => m.date.slice(0,7) === curMonth && m.tag === 'stipendio' && parseInt(m.date.slice(-2)) >= 28)) {
-            runningBalance += CONFIG.stip30;
+            runningBalance += CONFIG.stip30; totalExpectedIn += CONFIG.stip30;
             missingStipends.push({name: "Stipendio 30", amt: CONFIG.stip30});
         }
         if (d === CONFIG.inpsG && !state.movs.some(m => m.date.slice(0,7) === curMonth && m.tag === 'inps')) {
-            runningBalance += CONFIG.inpsVal;
+            runningBalance += CONFIG.inpsVal; totalExpectedIn += CONFIG.inpsVal;
             missingStipends.push({name: "INPS", amt: CONFIG.inpsVal});
         }
 
-        // Fisse ricorrenti (sottratte se non pagate realmente nel mese)
         state.buds.forEach(f => {
             const pagata = state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.toLowerCase().includes(f.cat.toLowerCase()));
             if (parseInt(f.day) === d && !pagata) {
@@ -191,8 +191,11 @@
         });
         dailyProjection.push({ day: d, balance: runningBalance });
     }
-    const spesoSvago = state.movs.filter(m => m.date.slice(0,7) === curMonth && m.tag === 'svago').reduce((s,m) => s + m.amt, 0);
-    return { bancaBal, cashBal, avail: dailyProjection.length > 0 ? dailyProjection[dailyProjection.length-1].balance : bancaBal, residuoSvago: 500 - spesoSvago, dailyProjection, missingStipends, missingFisse, futureMovements };
+    
+    const finalAvail = dailyProjection.length > 0 ? dailyProjection[dailyProjection.length-1].balance : bancaBal;
+    const efficiency = totalExpectedIn > 0 ? Math.max(0, (finalAvail / totalExpectedIn) * 100) : 0;
+
+    return { bancaBal, cashBal, avail: finalAvail, efficiency, dailyProjection, missingStipends, missingFisse };
   }
 
   function render() {
@@ -203,14 +206,15 @@
     document.getElementById('curBal').textContent = fmt(d.avail);
     document.getElementById('savBal').textContent = fmt(state.sBal);
     document.getElementById('cashBal').textContent = fmt(d.cashBal);
-    document.getElementById('varieBal').textContent = fmt(Math.max(0, d.residuoSvago));
     
     const banner = document.getElementById('alertBanner');
     const minBal = d.dailyProjection.length > 0 ? Math.min(...d.dailyProjection.map(p => p.balance)) : d.bancaBal;
     banner.className = minBal < 800 ? "alert-warn" : "alert-ok";
     banner.style.background = minBal < 800 ? "#fef2f2" : "#ecfdf5";
     banner.style.color = minBal < 800 ? "#991b1b" : "#065f46";
-    banner.textContent = minBal < 800 ? `🚨 GAP ALERT: Saldo scenderà a ${fmt(minBal)}` : "✅ FLUSSO SICURO (>800€)";
+    banner.textContent = minBal < 800 ? `🚨 GAP ALERT: Saldo critico ${fmt(minBal)}` : "✅ FLUSSO SICURO";
+
+    updateGauge(d.efficiency);
 
     // FISSE
     document.getElementById('budList').innerHTML = state.buds.map((f, i) => {
@@ -232,25 +236,51 @@
     updateChart(d.dailyProjection); saveData();
   }
 
+  function updateGauge(val) {
+    const ctx = document.getElementById('gaugeChart').getContext('2d');
+    if(gaugeChart) gaugeChart.destroy();
+    
+    document.getElementById('gaugeLabel').textContent = `Efficienza: ${val.toFixed(1)}%`;
+    const mText = document.getElementById('motivationText');
+    if(val > 40) mText.textContent = "🚀 Sei un drago del risparmio! Le vacanze sono sempre più vicine.";
+    else if(val > 20) mText.textContent = "🏖️ Ottimo ritmo. Continua così e quel cocktail in spiaggia sarà tuo!";
+    else if(val > 10) mText.textContent = "🧗 Resistenza! Ogni piccola rinuncia oggi è un giorno di relax domani.";
+    else mText.textContent = "⚠️ Attenzione alle spese extra. Proteggi il tuo sogno estivo!";
+
+    gaugeChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            datasets: [{
+                data: [val, 100 - val],
+                backgroundColor: [val > 30 ? '#10b981' : '#f59e0b', '#e2e8f0'],
+                borderWidth: 0,
+                circumference: 180,
+                rotation: 270,
+                cutout: '80%'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { enabled: false } }
+        }
+    });
+  }
+
   function showDetail(type) {
     const d = getCalculatedData();
     let title = "", body = "";
     if(type === 'gap') {
         title = "Analisi Disponibile GAP 🏁";
         body = `<div class="gap-item"><span>Saldo banca oggi:</span><b>${fmt(d.bancaBal)}</b></div>`;
-        if(d.futureMovements.length > 0) {
-            body += `<div style="color:var(--save); font-weight:700; margin:10px 0 5px 0">Impegni futuri a storico:</div>`;
-            d.futureMovements.filter(x => x.type === 'out').forEach(m => body += `<div class="gap-item"><span>- ${m.name} (Gg ${m.day})</span><b>${fmt(m.amt)}</b></div>`);
-        }
-        body += `<div style="color:var(--in); font-weight:700; margin:10px 0 5px 0">Entrate attese nel mese:</div>`;
+        body += `<div style="color:var(--in); font-weight:700; margin:10px 0 5px 0">Entrate attese:</div>`;
         d.missingStipends.forEach(s => body += `<div class="gap-item"><span>+ ${s.name}</span><b>${fmt(s.amt)}</b></div>`);
-        body += `<div style="color:var(--out); font-weight:700; margin:10px 0 5px 0">Fisse ricorrenti da pagare:</div>`;
+        body += `<div style="color:var(--out); font-weight:700; margin:10px 0 5px 0">Fisse da pagare:</div>`;
         d.missingFisse.forEach(f => body += `<div class="gap-item"><span>- ${f.name} (Gg ${f.day})</span><b>${fmt(f.amt)}</b></div>`);
-        body += `<hr><div class="gap-item" style="font-size:1rem; color:var(--accent)"><span>Proiezione fine mese:</span><b>${fmt(d.avail)}</b></div>`;
-    } else if(type === 'banca') { title = "Saldo Reale"; body = "Somma dei movimenti registrati fino ad oggi."; }
-    else if(type === 'shopping') { title = "Target Shopping"; body = `Hai speso <b>${fmt(500 - d.residuoSvago)}</b> su 500€ totali.`; }
-    else if(type === 'risparmio') { body = `Fondo vacanze: <b>${fmt(state.sBal)}</b>`; }
-    else if(type === 'cassa') { body = `Saldo fisico: <b>${fmt(d.cashBal)}</b>`; }
+        body += `<hr><div class="gap-item" style="font-size:1rem; color:var(--accent)"><span>Fine mese stimato:</span><b>${fmt(d.avail)}</b></div>`;
+    } else if(type === 'banca') { title = "Saldo Reale"; body = "Liquidità attuale sul conto."; }
+    else if(type === 'risparmio') { body = `Fondo vacanze accumulato: <b>${fmt(state.sBal)}</b><br><br><i>Tip: Usa "+" per aggiungere i risparmi del mese!</i>`; }
+    else if(type === 'cassa') { body = `Contante in tasca: <b>${fmt(d.cashBal)}</b>`; }
     document.getElementById('modalTitle').innerHTML = title; document.getElementById('modalBody').innerHTML = body; document.getElementById('detailModal').style.display = 'flex';
   }
 
@@ -268,7 +298,7 @@
 
   function manageFunds(action) {
     let amt = Number(prompt("Importo €:")); if(!amt) return; const dStr = new Date().toISOString().slice(0,10);
-    if(action==='save_in') { state.sBal += amt; state.movs.push({date:dStr, source:'banca', type:'uscita', amt, cat:"💎 Risparmio", tag:"ordinaria"}); }
+    if(action==='save_in') { state.sBal += amt; state.movs.push({date:dStr, source:'banca', type:'uscita', amt, cat:"💎 Risparmio Vacanze", tag:"ordinaria"}); }
     else if(action==='save_out') { state.sBal -= amt; state.movs.push({date:dStr, source:'banca', type:'entrata', amt, cat:"🔙 Revoca Risparmio", tag:"ordinaria"}); }
     else if(action==='cash_in') { state.movs.push({date:dStr, source:'banca', type:'uscita', amt, cat:"🏧 Prelievo"}); state.movs.push({date:dStr, source:'contanti', type:'entrata', amt, cat:"💵 Carico Cassa"}); }
     render();
@@ -288,7 +318,7 @@
   document.getElementById('budForm').onsubmit = e => { e.preventDefault(); state.buds.push({ cat: document.getElementById('bCat').value, amt: Number(document.getElementById('bAmt').value), day: document.getElementById('bDay').value }); render(); e.target.reset(); };
   function delM(i) { if(confirm("Eliminare?")) { state.movs.splice(i,1); render(); } }
   function delB(i) { if(confirm("Eliminare?")) { state.buds.splice(i,1); render(); } }
-  function exportData() { const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'executive_cashflow_v105.json'; a.click(); }
+  function exportData() { const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'cashflow_v106_vacanze.json'; a.click(); }
   function importData(e) { const r = new FileReader(); r.onload = x => { state = JSON.parse(x.target.result); render(); }; r.readAsText(e.target.files[0]); }
   loadData();
 </script>
