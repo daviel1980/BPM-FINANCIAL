@@ -20,16 +20,17 @@
     .title { margin: 0; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; }
 
     .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
-    .stat-card { background: var(--card); padding: 0.9rem; border-radius: 0.8rem; border: 1px solid var(--border); cursor: pointer; position: relative; z-index: 10; }
-    .stat-label { font-size: 0.55rem; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 3px; display: block; pointer-events: none; }
-    .stat-value { font-size: 1.05rem; font-weight: 800; pointer-events: none; }
+    .stat-card { background: var(--card); padding: 0.9rem; border-radius: 0.8rem; border: 1px solid var(--border); cursor: pointer; position: relative; }
+    .stat-label { font-size: 0.55rem; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 3px; display: block; }
+    .stat-value { font-size: 1.05rem; font-weight: 800; }
     
     .border-banca { border-left: 5px solid var(--in); }
     .border-disp { border-left: 5px solid var(--varie); background: #fdf2ff; }
     .border-save { border-left: 5px solid var(--save); }
     .border-cash { border-left: 5px solid var(--cash); }
+    .border-tempo { border-left: 5px solid #ec4899; grid-column: span 2; } /* Card Target Tempo Libero */
 
-    .quick-actions { display: flex; gap: 4px; position: absolute; top: 6px; right: 6px; z-index: 20; }
+    .quick-actions { display: flex; gap: 4px; position: absolute; top: 6px; right: 6px; }
     .btn-small { background: #fff; border: 1px solid var(--border); padding: 2px 6px; font-size: 0.6rem; border-radius: 4px; cursor: pointer; font-weight: 800; }
     
     .card { background: var(--card); padding: 1rem; border-radius: 1rem; border: 1px solid var(--border); }
@@ -48,9 +49,8 @@
     .money.in { color: var(--in); font-weight: 700; }
     .money.out { color: var(--out); font-weight: 700; }
 
-    /* Fix Modal Visibility */
     .modal { display: none; position: fixed; z-index: 9999; left:0; top:0; width:100%; height:100%; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-    .modal-content { background: white; padding: 1.5rem; border-radius: 1.2rem; width: 85%; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); }
+    .modal-content { background: white; padding: 1.5rem; border-radius: 1.2rem; width: 85%; max-width: 400px; }
     
     .btn-icon { background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 2px 6px; }
     .edit-input { font-size: 0.8rem; padding: 4px; border: 1px solid var(--save); border-radius: 4px; width: 100%; box-sizing: border-box; margin: 2px 0; }
@@ -72,6 +72,9 @@
         <div class="stat-card border-cash" onclick="showDetail('cassa')">
             <div class="quick-actions"><button class="btn-small" onclick="event.stopPropagation(); editManualBalance('cash')">✏️</button><button class="btn-small" onclick="event.stopPropagation(); manageFunds('cash_in')">➕</button></div>
             <span class="stat-label">CONTANTE 💵</span><div id="cashBal" class="stat-value">0 €</div>
+        </div>
+        <div class="stat-card border-tempo" onclick="showDetail('tempo')">
+            <span class="stat-label">TARGET TEMPO LIBERO (500€/MESE) 🛍️</span><div id="tempoBal" class="stat-value">0 €</div>
         </div>
     </div>
 
@@ -100,7 +103,7 @@
             <input type="date" id="mDate" required value="2026-04-16">
             <div style="display:flex; gap:8px"><select id="mSource"><option value="banca">💳 Banca</option><option value="contanti">💵 Cassa</option></select><select id="mType"><option value="uscita">Uscita</option><option value="entrata">Entrata</option></select></div>
             <input type="number" id="mAmt" step="0.01" placeholder="Importo €" required>
-            <input type="text" id="mCat" placeholder="Descrizione" required>
+            <input type="text" id="mCat" placeholder="Descrizione (usa 'svago' per il target)" required>
             <button type="submit" class="primary">AGGIUNGI</button>
         </form>
     </div>
@@ -121,7 +124,7 @@
     <div class="modal-content" onclick="event.stopPropagation()">
         <h3 id="modalTitle" style="color:var(--accent); margin-top:0;"></h3>
         <div id="modalBody" style="line-height:1.6; font-size:0.95rem;"></div>
-        <button onclick="closeModal()" class="primary" style="margin-top:1.5rem; margin-bottom:0;">CHIUDI</button>
+        <button onclick="closeModal()" class="primary" style="margin-top:1.5rem;">CHIUDI</button>
     </div>
 </div>
 
@@ -146,8 +149,13 @@
         const todayStr = today.toISOString().slice(0,10);
         const curMonth = todayStr.slice(0,7);
         const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+        
         const bancaBal = state.movs.filter(m => m.date <= todayStr && m.source === 'banca').reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
         const cashBal = (state.cashManual !== 0 && state.cashManual !== undefined) ? state.cashManual : state.movs.filter(m => m.source === 'contanti' && m.date <= todayStr).reduce((s, m) => s + (m.type === 'entrata' ? m.amt : -m.amt), 0);
+        
+        // Calcolo Tempo Libero
+        const spesoTempo = state.movs.filter(m => m.date.slice(0,7) === curMonth && (m.cat.toLowerCase().includes('svago') || m.cat.toLowerCase().includes('shopping'))).reduce((s, m) => s + m.amt, 0);
+
         let dailyProjection = []; let runningBalance = bancaBal; let totalExpected = bancaBal;
         for (let d = today.getDate(); d <= lastDay; d++) {
             const dStr = curMonth + "-" + String(d).padStart(2, '0');
@@ -158,7 +166,7 @@
             state.buds.forEach(f => { if (parseInt(f.day) === d && !state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.toLowerCase().includes(f.cat.toLowerCase()))) runningBalance -= f.amt; });
             dailyProjection.push({ day: d, balance: runningBalance });
         }
-        return { bancaBal, cashBal, avail: dailyProjection.length > 0 ? dailyProjection[dailyProjection.length-1].balance : bancaBal, efficiency: totalExpected > 0 ? (runningBalance/totalExpected)*100 : 0, dailyProjection };
+        return { bancaBal, cashBal, avail: dailyProjection.length > 0 ? dailyProjection[dailyProjection.length-1].balance : bancaBal, efficiency: totalExpected > 0 ? (runningBalance/totalExpected)*100 : 0, dailyProjection, residuoTempo: Math.max(0, 500 - spesoTempo), spesoTempo };
     }
 
     function render() {
@@ -168,13 +176,17 @@
         document.getElementById('curBal').textContent = fmt(d.avail);
         document.getElementById('savBal').textContent = fmt(state.sBal);
         document.getElementById('cashBal').textContent = fmt(d.cashBal);
+        document.getElementById('tempoBal').textContent = fmt(d.residuoTempo);
+        
         updateGauge(d.efficiency);
+
         document.getElementById('budList').innerHTML = state.buds.map((f, i) => {
             const isE = editingBudId === i;
             return `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:#fff; border:1px solid var(--border); border-radius:10px; border-left:4px solid var(--out)">
                 <div style="flex:1">${isE ? `<input type="text" id="eb-cat-${i}" class="edit-input" value="${f.cat}"><input type="number" id="eb-day-${i}" class="edit-input" value="${f.day}">` : `<b>${f.cat}</b><br><small>Gg: ${f.day}</small>`}</div>
                 <div style="text-align:right">${isE ? `<input type="number" id="eb-amt-${i}" class="edit-input" value="${f.amt}">` : `<b style="color:var(--out)">${fmt(f.amt)}</b>`}<div><button class="btn-icon" onclick="${isE ? `saveBud(${i})` : `toggleEditBud(${i})`}">${isE ? '💾' : '✏️'}</button><button class="btn-icon" onclick="delB(${i})">🗑️</button></div></div></div>`;
         }).join('');
+
         const filt = state.movs.filter(m => m.cat.toLowerCase().includes(q) || m.amt.toString().includes(q)).sort((a,b) => new Date(b.date) - new Date(a.date));
         document.getElementById('rows').innerHTML = filt.slice(0,10).map((m) => {
             const idx = state.movs.indexOf(m); const isE = editingId === idx;
@@ -194,14 +206,12 @@
 
     function showDetail(type) {
         const d = getCalculatedData(); let t = "", b = "";
-        if(type==='gap') { t="Disponibile GAP"; b=`La liquidità stimata a fine mese è di <b>${fmt(d.avail)}</b>. Questo valore tiene conto di tutte le spese fisse e gli stipendi mancanti.`; }
-        else if(type==='risparmio') { t="Fondo Risparmio"; b=`Hai attualmente accantonato un totale di <b>${fmt(state.sBal)}</b> nel tuo fondo dedicato.`; }
-        else if(type==='banca') { t="Saldo Banca"; b=`Questo è il saldo reale attuale presente sul tuo conto corrente: <b>${fmt(d.bancaBal)}</b>.`; }
-        else if(type==='cassa') { t="Saldo Contanti"; b=`Nel tuo portafoglio dovresti avere fisicamente: <b>${fmt(d.cashBal)}</b>.`; }
-        
-        document.getElementById('modalTitle').innerText = t; 
-        document.getElementById('modalBody').innerHTML = b; 
-        document.getElementById('detailModal').style.display = 'flex';
+        if(type==='gap') { t="Disponibile GAP"; b=`Liquidità stimata a fine mese: <b>${fmt(d.avail)}</b>.`; }
+        else if(type==='tempo') { t="Target Tempo Libero"; b=`Hai speso <b>${fmt(d.spesoTempo)}</b> su 500€ totali questo mese.<br>Residuo: <b>${fmt(d.residuoTempo)}</b>.`; }
+        else if(type==='risparmio') { t="Fondo Risparmio"; b=`Accantonato: <b>${fmt(state.sBal)}</b>`; }
+        else if(type==='banca') { t="Banca"; b="Saldo reale attuale sul conto."; }
+        else if(type==='cassa') { t="Contanti"; b=`Saldo portafoglio: <b>${fmt(d.cashBal)}</b>`; }
+        document.getElementById('modalTitle').innerText = t; document.getElementById('modalBody').innerHTML = b; document.getElementById('detailModal').style.display = 'flex';
     }
 
     function closeModal() { document.getElementById('detailModal').style.display = 'none'; }
@@ -209,7 +219,7 @@
     function toggleEdit(i) { editingId = (editingId === i) ? null : i; render(); }
     function saveEdit(i) { state.movs[i].date = document.getElementById(`ed-${i}`).value; state.movs[i].cat = document.getElementById(`ec-${i}`).value; state.movs[i].amt = Number(document.getElementById(`ea-${i}`).value); editingId = null; render(); }
     function toggleEditBud(i) { editingBudId = (editingBudId === i) ? null : i; render(); }
-    function saveBud(i) { state.buds[i].cat = document.getElementById(`eb-cat-${i}`).value; state.buds[i].day = document.getElementById(`eb-day-${i}`).value; state.buds[i].amt = Number(document.getElementById(`eb-amt-${i}`).value); editingBudId = null; render(); }
+    function saveBud(i) { state.buds[i].cat = document.getElementById(`eb-cat-${i}`).value; state.buds[i].day = document.getElementById(`eb-day-${i}`).value; state.buds[i].amt = Number(document.getElementById target="_blank" .getElementById(`eb-amt-${i}`).value); editingBudId = null; render(); }
     function manageFunds(action) { let amt = Number(prompt("Importo €:")); if(!amt) return; const dStr = new Date().toISOString().slice(0,10); if(action==='save_in') { state.sBal += amt; state.movs.push({date:dStr, source:'banca', type:'uscita', amt, cat:"💎 Risparmio"}); } else { state.movs.push({date:dStr, source:'banca', type:'uscita', amt, cat:"🏧 Prelievo"}); state.movs.push({date:dStr, source:'contanti', type:'entrata', amt, cat:"💵 Carico"}); } render(); }
 
     function updateChart(projection) {
