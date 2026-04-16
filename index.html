@@ -44,7 +44,6 @@
     .gauge-wrapper { display: flex; flex-direction: column; align-items: center; }
     .gauge-container { width: 150px; height: 85px; position: relative; }
     #gaugeLabel { font-size: 1rem; font-weight: 900; color: var(--accent); margin-top: -10px; }
-    #motivationText { font-size: 0.65rem; font-style: italic; color: #64748b; text-align: center; margin-top: 5px; }
 
     input, select, button { border-radius: 0.7rem; border: 1px solid var(--border); padding: 0.8rem; font-size: 0.95rem; width: 100%; margin-bottom: 0.6rem; box-sizing: border-box; }
     button.primary { background: var(--accent); color: white; border: none; font-weight: 800; cursor: pointer; }
@@ -96,7 +95,6 @@
         <div class="gauge-wrapper">
             <div class="gauge-container"><canvas id="gaugeChart"></canvas></div>
             <div id="gaugeLabel">0%</div>
-            <div id="motivationText">Calcolo...</div>
         </div>
     </div>
 
@@ -168,24 +166,31 @@
     function saveData() { localStorage.setItem('cashflow_master_data', JSON.stringify(state)); }
 
     function getCalculatedData() {
-        const today = new Date(); today.setHours(0,0,0,0);
-        const todayStr = today.toISOString().slice(0,10);
-        const curMonth = todayStr.slice(0,7);
-        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+        const curMonth = todayStr.slice(0, 7);
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
         
-        const bancaBal = state.movs.filter(m => m.source === 'banca' && m.date <= todayStr).reduce((s, m) => s + (m.type === 'entrata' ? Number(m.amt) : -Number(m.amt)), 0);
+        // CORREZIONE DEFINITIVA: Calcolo Saldo Reale includendo OGGI
+        const bancaBal = state.movs
+            .filter(m => m.source === 'banca' && m.date <= todayStr)
+            .reduce((s, m) => s + (m.type === 'entrata' ? Number(m.amt) : -Number(m.amt)), 0);
+        
         const cashBal = (state.cashManual || 0) || state.movs.filter(m => m.source === 'contanti' && m.date <= todayStr).reduce((s, m) => s + (m.type === 'entrata' ? Number(m.amt) : -Number(m.amt)), 0);
         const tempoMovs = state.movs.filter(m => m.date.slice(0,7) === curMonth && (m.tag === 'svago' || m.cat.toLowerCase().includes('svago')));
         const spesoTempo = tempoMovs.reduce((s, m) => s + Number(m.amt), 0);
 
         let runningBalance = bancaBal; let futureDetails = []; let dailyProjection = [];
 
-        for (let d = today.getDate(); d <= lastDay; d++) {
+        for (let d = now.getDate(); d <= lastDay; d++) {
             const dStr = curMonth + "-" + String(d).padStart(2, '0');
+            
+            // Movimenti futuri registrati
             state.movs.filter(m => m.date === dStr && m.date > todayStr && m.source === 'banca').forEach(m => {
                 const val = (m.type === 'entrata' ? Number(m.amt) : -Number(m.amt));
                 runningBalance += val; futureDetails.push({ cat: m.cat, amt: val });
             });
+
             if (d === 15 && !state.movs.some(m => m.date.slice(0,7) === curMonth && m.date.includes('-15') && m.tag === 'stipendio')) { 
                 runningBalance += CONFIG.stip15; futureDetails.push({ cat: "Stipendio 15 (Est.)", amt: CONFIG.stip15 });
             }
@@ -210,7 +215,9 @@
         document.getElementById('savBal').textContent = fmt(state.sBal);
         document.getElementById('cashBal').textContent = fmt(d.cashBal);
         document.getElementById('tempoBal').textContent = fmt(d.residuoTempo);
-        updateGauge(d.avail > 1000 ? 100 : (d.avail/1000)*100);
+        
+        const efficiency = d.avail > 1000 ? 100 : (d.avail/1000)*100;
+        updateGauge(efficiency > 0 ? efficiency : 0);
 
         document.getElementById('budList').innerHTML = state.buds.map((f, i) => {
             const isE = editingBudId === i;
@@ -252,8 +259,6 @@
             b = `<div class="detail-row"><span>Saldo Reale Oggi:</span><b>${fmt(d.bancaBal)}</b></div>`;
             d.futureDetails.forEach(v => { b += `<div class="detail-row" style="color:${v.amt>0?'green':'red'}"><span>${v.cat}:</span><b>${v.amt>0?'+':''}${fmt(v.amt)}</b></div>`; });
             b += `<div style="margin-top:15px; border-top:2px solid #eee; padding-top:10px" class="detail-row"><span><b>TOTALE FINE MESE:</b></span><b>${fmt(d.avail)}</b></div>`;
-        } else if(type==='banca') {
-            t="Saldo Reale"; b="Somma matematica di tutti i movimenti registrati fino alla data di oggi.";
         } else if(type==='tempo') {
             t="Dettaglio Target 500€";
             b += d.tempoMovs.map(m => `<div class="detail-row"><span>${m.cat}</span><span style="color:red">-${fmt(m.amt)}</span></div>`).join('');
@@ -286,7 +291,7 @@
         editingBudId = null; render();
     }
     function editManualBalance(type) { if(type==='save'){const n=prompt("Risparmio:",state.sBal); if(n!==null)state.sBal=Number(n);} else{const n=prompt("Contante:",getCalculatedData().cashBal); if(n!==null)state.cashManual=Number(n);} render(); }
-    function manageFunds(action) { let amt = Number(prompt("Importo €:")); if(!amt) return; const dStr = new Date().toISOString().slice(0,10); if(action==='save_in') { state.sBal += amt; state.movs.push({date:dStr, source:'banca', type:'uscita', amt, cat:"💎 Risparmio", tag:"ordinaria"}); } else { state.movs.push({date:dStr, source:'banca', type:'uscita', amt, cat:"🏧 Prelievo", tag:"ordinaria"}); state.movs.push({date:dStr, source:'contanti', type:'entrata', amt, cat:"💵 Carico", tag:"ordinaria"}); } render(); }
+    function manageFunds(action) { let amt = Number(prompt("Importo €:")); if(!amt) return; const dStr = new Date().toISOString().split('T')[0]; if(action==='save_in') { state.sBal += amt; state.movs.push({date:dStr, source:'banca', type:'uscita', amt, cat:"💎 Risparmio", tag:"ordinaria"}); } else { state.movs.push({date:dStr, source:'banca', type:'uscita', amt, cat:"🏧 Prelievo", tag:"ordinaria"}); state.movs.push({date:dStr, source:'contanti', type:'entrata', amt, cat:"💵 Carico", tag:"ordinaria"}); } render(); }
 
     function updateChart(projection) {
         const ctx = document.getElementById('balanceChart').getContext('2d'); if(chart) chart.destroy();
