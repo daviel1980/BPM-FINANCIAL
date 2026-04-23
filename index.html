@@ -153,7 +153,7 @@
     const fmt = n => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(isNaN(n) ? 0 : n);
     const CONFIG = { stip15: 1650, stip30: 1650, warningLevel: 800 };
 
-    let state = { movs: [], buds: [], sBal: 0, cashManual: 0 };
+    let state = { movs: [], buds: [], sBal: 0, cashManual: null };
     let editingId = null; let editingBudId = null; let chart; let gaugeChart;
 
     function loadData() {
@@ -175,9 +175,8 @@
             .filter(m => m.source === 'banca' && m.date <= todayStr)
             .reduce((s, m) => s + (m.type === 'entrata' ? Number(m.amt) : -Number(m.amt)), 0);
         
-        // FIX NaN: Controllo rigoroso sui valori manuali
-        const cashVal = parseFloat(state.cashManual);
-        const cashBal = (!isNaN(cashVal) && state.cashManual !== 0) ? cashVal : state.movs.filter(m => m.source === 'contanti' && m.date <= todayStr).reduce((s, m) => s + (m.type === 'entrata' ? Number(m.amt) : -Number(m.amt)), 0);
+        // FIX ZERO: Se cashManual è un numero (anche 0), usa quello. Se è null, calcola.
+        const cashBal = (state.cashManual !== null) ? state.cashManual : state.movs.filter(m => m.source === 'contanti' && m.date <= todayStr).reduce((s, m) => s + (m.type === 'entrata' ? Number(m.amt) : -Number(m.amt)), 0);
         
         const tempoMovs = state.movs.filter(m => m.date.slice(0,7) === curMonth && (m.tag === 'svago' || m.cat.toLowerCase().includes('svago')));
         const spesoTempo = tempoMovs.reduce((s, m) => s + Number(m.amt), 0);
@@ -290,7 +289,6 @@
         editingBudId = null; render();
     }
     
-    // FIX NaN: Gestione input manuale
     function editManualBalance(type) { 
         if(type==='save'){
             const n = prompt("Risparmio attuale:", state.sBal); 
@@ -304,6 +302,7 @@
             const n = prompt("Contante attuale:", current); 
             if(n !== null) { 
                 const val = parseFloat(n.replace(',', '.'));
+                // Imposta il valore, permettendo lo 0
                 state.cashManual = isNaN(val) ? 0 : val; 
                 render(); 
             }
