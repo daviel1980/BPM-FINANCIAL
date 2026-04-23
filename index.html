@@ -150,7 +150,7 @@
 </div>
 
 <script>
-    const fmt = n => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
+    const fmt = n => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(isNaN(n) ? 0 : n);
     const CONFIG = { stip15: 1650, stip30: 1650, warningLevel: 800 };
 
     let state = { movs: [], buds: [], sBal: 0, cashManual: 0 };
@@ -175,8 +175,9 @@
             .filter(m => m.source === 'banca' && m.date <= todayStr)
             .reduce((s, m) => s + (m.type === 'entrata' ? Number(m.amt) : -Number(m.amt)), 0);
         
-        // FIX MATITA: Se cashManual esiste e non è 0, usa quello, altrimenti calcola dai movimenti
-        const cashBal = (state.cashManual !== 0) ? state.cashManual : state.movs.filter(m => m.source === 'contanti' && m.date <= todayStr).reduce((s, m) => s + (m.type === 'entrata' ? Number(m.amt) : -Number(m.amt)), 0);
+        // FIX NaN: Controllo rigoroso sui valori manuali
+        const cashVal = parseFloat(state.cashManual);
+        const cashBal = (!isNaN(cashVal) && state.cashManual !== 0) ? cashVal : state.movs.filter(m => m.source === 'contanti' && m.date <= todayStr).reduce((s, m) => s + (m.type === 'entrata' ? Number(m.amt) : -Number(m.amt)), 0);
         
         const tempoMovs = state.movs.filter(m => m.date.slice(0,7) === curMonth && (m.tag === 'svago' || m.cat.toLowerCase().includes('svago')));
         const spesoTempo = tempoMovs.reduce((s, m) => s + Number(m.amt), 0);
@@ -257,8 +258,6 @@
             b = `<div class="detail-row"><span>Saldo Reale Oggi:</span><b>${fmt(d.bancaBal)}</b></div>`;
             d.futureDetails.forEach(v => { b += `<div class="detail-row" style="color:${v.amt>0?'green':'red'}"><span>${v.cat}:</span><b>${v.amt>0?'+':''}${fmt(v.amt)}</b></div>`; });
             b += `<div style="margin-top:15px; border-top:2px solid #eee; padding-top:10px" class="detail-row"><span><b>TOTALE FINE MESE:</b></span><b>${fmt(d.avail)}</b></div>`;
-        } else if(type==='banca') {
-            t="Saldo Reale"; b="Somma matematica di tutti i movimenti registrati fino alla data di oggi.";
         } else if(type==='tempo') {
             t="Dettaglio Target 500€";
             b += d.tempoMovs.map(m => `<div class="detail-row"><span>${m.cat}</span><span style="color:red">-${fmt(m.amt)}</span></div>`).join('');
@@ -291,15 +290,23 @@
         editingBudId = null; render();
     }
     
-    // FIX MATITA: Corretto salvataggio valori manuali
+    // FIX NaN: Gestione input manuale
     function editManualBalance(type) { 
         if(type==='save'){
             const n = prompt("Risparmio attuale:", state.sBal); 
-            if(n !== null) { state.sBal = Number(n); render(); }
+            if(n !== null) { 
+                const val = parseFloat(n.replace(',', '.'));
+                state.sBal = isNaN(val) ? 0 : val; 
+                render(); 
+            }
         } else {
             const current = getCalculatedData().cashBal;
             const n = prompt("Contante attuale:", current); 
-            if(n !== null) { state.cashManual = Number(n); render(); }
+            if(n !== null) { 
+                const val = parseFloat(n.replace(',', '.'));
+                state.cashManual = isNaN(val) ? 0 : val; 
+                render(); 
+            }
         } 
     }
 
@@ -312,23 +319,8 @@
             data: { 
                 labels: projection.map(p => p.day), 
                 datasets: [
-                    { 
-                        label: 'Proiezione',
-                        data: projection.map(p => p.balance), 
-                        borderColor: '#01696f', 
-                        fill: true, 
-                        backgroundColor: 'rgba(1, 105, 92, 0.05)', 
-                        tension: 0.3 
-                    },
-                    {
-                        label: 'WARNING 800€',
-                        data: Array(projection.length).fill(CONFIG.warningLevel),
-                        borderColor: '#ef4444',
-                        borderWidth: 2,
-                        borderDash: [5, 5],
-                        pointRadius: 0,
-                        fill: false
-                    }
+                    { label: 'Proiezione', data: projection.map(p => p.balance), borderColor: '#01696f', fill: true, backgroundColor: 'rgba(1, 105, 92, 0.05)', tension: 0.3 },
+                    { label: 'Soglia 800€', data: Array(projection.length).fill(CONFIG.warningLevel), borderColor: '#ef4444', borderWidth: 2, borderDash: [5, 5], pointRadius: 0, fill: false }
                 ] 
             }, 
             options: { responsive: true, plugins: { legend: { display: false } } } 
