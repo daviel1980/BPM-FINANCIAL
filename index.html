@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-title" content="CashflowVacanze">
   <link rel="apple-touch-icon" href="https://img.icons8.com/fluency/96/beach-umbrella.png">
   
-  <title>Gestione Cashflow v132</title>
+  <title>Cashflow Davide & Antonella v133</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -23,7 +23,7 @@
     
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.8; } 100% { opacity: 1; } }
 
-    .header-card { background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: white; padding: 1.2rem; border-radius: 1.2rem; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .header-card { background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: white; padding: 1.2rem; border-radius: 1.2rem; text-align: center; }
     .logo-svg { width: 45px; height: 45px; margin-bottom: 5px; }
     .title { margin: 0; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; }
 
@@ -74,11 +74,11 @@
         <div class="stat-card border-banca" onclick="showDetail('banca')"><span class="stat-label">SALDO REALE 💳</span><div id="actBal" class="stat-value">0 €</div></div>
         <div class="stat-card border-disp" onclick="showDetail('gap')"><span class="stat-label">DISPONIBILE (GAP) 🏁</span><div id="curBal" class="stat-value">0 €</div></div>
         <div class="stat-card border-save" onclick="showDetail('risparmio')">
-            <div style="position:absolute; top:8px; right:8px"><button class="btn-icon" onclick="event.stopPropagation(); editManual('save')">✏️</button></div>
+            <div style="position:absolute; top:8px; right:8px"><button class="btn-icon" onclick="event.stopPropagation(); editManualBalance('save')">✏️</button></div>
             <span class="stat-label">RISPARMIO 💎</span><div id="savBal" class="stat-value">0 €</div>
         </div>
         <div class="stat-card border-cash" onclick="showDetail('cassa')">
-            <div style="position:absolute; top:8px; right:8px"><button class="btn-icon" onclick="event.stopPropagation(); editManual('cash')">✏️</button></div>
+            <div style="position:absolute; top:8px; right:8px"><button class="btn-icon" onclick="event.stopPropagation(); editManualBalance('cash')">✏️</button></div>
             <span class="stat-label">CONTANTE 💵</span><div id="cashBal" class="stat-value">0 €</div>
         </div>
         <div class="stat-card border-tempo" onclick="showDetail('tempo')">
@@ -95,8 +95,10 @@
 
     <div class="card">
         <h2 class="section-title">Spese Fisse</h2>
+        <form id="budForm" style="display:flex; gap:5px; margin-bottom:10px">
+            <input type="text" id="bCat" placeholder="Nome" required style="flex:2"><input type="number" id="bAmt" placeholder="€" required style="flex:1"><input type="number" id="bDay" placeholder="GG" required min="1" max="31" style="flex:0.6"><button type="submit" style="flex:0.6; background:var(--accent); color:white; border:none; border-radius:8px">+</button>
+        </form>
         <div id="budList"></div>
-        <button class="primary" onclick="addFissa()" style="margin-top:10px">+ Aggiungi Fissa</button>
     </div>
 
     <div class="card">
@@ -123,14 +125,14 @@
         <input type="text" id="searchInput" placeholder="Cerca..." onkeyup="render()">
         <table class="table"><tbody id="rows"></tbody></table>
         <div style="display:flex; gap:8px; margin-top:10px">
-            <button onclick="exportData()" style="background:#eee; font-size:0.7rem; flex:1">BACKUP</button>
+            <button onclick="exportData()" style="background:#eee; font-size:0.7rem; flex:1">BACKUP JSON</button>
             <button onclick="document.getElementById('importFile').click()" style="background:#eee; font-size:0.7rem; flex:1">IMPORTA</button>
         </div>
         <input type="file" id="importFile" style="display:none" onchange="importData(event)">
     </div>
 </div>
 
-<div id="modal" class="modal" onclick="closeModal()">
+<div id="detailModal" class="modal" onclick="closeModal()">
     <div class="modal-content" onclick="event.stopPropagation()">
         <h3 id="modalTitle" style="color:var(--accent); margin-top:0;"></h3>
         <div id="modalBody"></div>
@@ -140,47 +142,55 @@
 
 <script>
     const fmt = n => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n || 0);
-    let state = { movs: [], fisse: [], sBal: 0, cashManual: null };
+    const CONFIG = { stip15: 1650, stip30: 1650, warningLevel: 800 };
+
+    let state = { movs: [], buds: [], sBal: 0, cashManual: null };
     let editingId = null; let chart;
 
-    function init() {
-        const saved = localStorage.getItem('cashflow_master_v132');
+    function loadData() {
+        const saved = localStorage.getItem('cashflow_master_v133');
         if (saved) state = JSON.parse(saved);
         document.getElementById('mDate').valueAsDate = new Date();
         render();
     }
+    function saveData() { localStorage.setItem('cashflow_master_v133', JSON.stringify(state)); }
 
-    function calculate() {
+    function getCalculatedData() {
         const now = new Date();
         const todayStr = now.toISOString().split('T')[0];
         const curMonth = todayStr.slice(0, 7);
         const bancaBal = state.movs.filter(m => m.source === 'banca' && m.date <= todayStr).reduce((s, m) => s + (m.type === 'entrata' ? Number(m.amt) : -Number(m.amt)), 0);
         const cashBal = (state.cashManual !== null) ? state.cashManual : state.movs.filter(m => m.source === 'contanti' && m.date <= todayStr).reduce((s, m) => s + (m.type === 'entrata' ? Number(m.amt) : -Number(m.amt)), 0);
-        const spesoTempo = state.movs.filter(m => m.date.slice(0,7) === curMonth && m.mTag === 'svago').reduce((s, m) => s + Number(m.amt), 0);
-        
-        let running = bancaBal;
+        const tempoMovs = state.movs.filter(m => m.date.slice(0,7) === curMonth && (m.tag === 'svago' || m.cat.toLowerCase().includes('svago')));
+        const spesoTempo = tempoMovs.reduce((s, m) => s + Number(m.amt), 0);
+
+        let runningBalance = bancaBal;
+        let futureDetails = [];
         const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        
         for (let d = now.getDate(); d <= lastDay; d++) {
             const dStr = curMonth + "-" + String(d).padStart(2, '0');
-            if (d === 15 && !state.movs.some(m => m.date.slice(0,7) === curMonth && m.date.endsWith('-15') && m.mTag === 'stipendio')) running += 1650;
-            if (d === lastDay && !state.movs.some(m => m.date.slice(0,7) === curMonth && Number(m.date.split('-')[2]) > 27 && m.mTag === 'stipendio')) running += 1650;
-            state.fisse.forEach(f => {
-                if (Number(f.day) === d && !state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.toLowerCase().includes(f.name.toLowerCase()))) running -= Number(f.amt);
-            });
             state.movs.filter(m => m.date === dStr && m.date > todayStr && m.source === 'banca').forEach(m => {
-                running += (m.type === 'entrata' ? Number(m.amt) : -Number(m.amt));
+                const val = (m.type === 'entrata' ? Number(m.amt) : -Number(m.amt));
+                runningBalance += val; futureDetails.push({ cat: m.cat, amt: val });
+            });
+            if (d === 15 && !state.movs.some(m => m.date.slice(0,7) === curMonth && m.date.endsWith('-15') && m.tag === 'stipendio')) { runningBalance += CONFIG.stip15; futureDetails.push({ cat: "Stipendio 15", amt: CONFIG.stip15 }); }
+            if (d === lastDay && !state.movs.some(m => m.date.slice(0,7) === curMonth && Number(m.date.split('-')[2]) > 27 && m.tag === 'stipendio')) { runningBalance += CONFIG.stip30; futureDetails.push({ cat: "Stipendio 30", amt: CONFIG.stip30 }); }
+            state.buds.forEach(f => {
+                if (Number(f.day) === d && !state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.toLowerCase().includes(f.cat.toLowerCase()))) { runningBalance -= Number(f.amt); futureDetails.push({ cat: "Fissa: " + f.cat, amt: -Number(f.amt) }); }
             });
         }
-        return { bancaBal, cashBal, avail: running, residuoTempo: 500 - spesoTempo };
+        return { bancaBal, cashBal, avail: runningBalance, futureDetails, residuoTempo: 500 - spesoTempo };
     }
 
     function render() {
-        const d = calculate();
+        const d = getCalculatedData();
         const q = (document.getElementById('searchInput').value || "").toLowerCase();
         
         const banner = document.getElementById('dynamicBanner');
-        if (d.avail < 800) { banner.className = "banner banner-warning"; banner.innerText = `🚨 ALERT: Saldo previsto fine mese a ${fmt(d.avail)}!`; }
-        else if (new Date().getDay() === 4) { banner.className = "banner banner-thursday"; banner.innerText = "📅 Giovedì: Aggiorna il saldo con Antonella!"; }
+        const isThursday = new Date().getDay() === 4;
+        if (d.avail < CONFIG.warningLevel) { banner.className = "banner banner-warning"; banner.innerText = `🚨 ALERT: Saldo previsto a ${fmt(d.avail)}!`; }
+        else if (isThursday) { banner.className = "banner banner-thursday"; banner.innerText = "📅 Giovedì: Check con Antonella! 🏖️"; }
         else { banner.className = "banner"; }
 
         document.getElementById('actBal').innerText = fmt(d.bancaBal);
@@ -189,33 +199,32 @@
         document.getElementById('cashBal').innerText = fmt(d.cashBal);
         document.getElementById('tempoBal').innerText = fmt(d.residuoTempo);
 
-        document.getElementById('budList').innerHTML = state.fisse.map((f, i) => `
+        document.getElementById('budList').innerHTML = state.buds.map((f, i) => `
             <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.8rem">
-                <span><b>${f.name}</b> (gg ${f.day})</span>
-                <span>${fmt(f.amt)} <button class="btn-icon" onclick="delFissa(${i})">🗑️</button></span>
+                <span><b>${f.cat}</b> (gg ${f.day})</span>
+                <span>${fmt(f.amt)} <button class="btn-icon" onclick="delB(${i})">🗑️</button></span>
             </div>`).join('');
 
         const filt = state.movs.filter(m => m.cat.toLowerCase().includes(q)).sort((a,b) => new Date(b.date) - new Date(a.date));
-        document.getElementById('rows').innerHTML = filt.slice(0,10).map((m, i) => {
-            const realIdx = state.movs.indexOf(m);
-            const isE = editingId === realIdx;
+        document.getElementById('rows').innerHTML = filt.slice(0,10).map((m) => {
+            const idx = state.movs.indexOf(m);
+            const isE = editingId === idx;
             return `<tr>
-                <td>${isE ? `<input type="text" id="ec-${realIdx}" value="${m.cat}">` : `<small>${m.date.split('-').reverse().join('/')}</small><br><b>${m.cat}</b>`}</td>
+                <td>${isE ? `<input type="text" id="ec-${idx}" value="${m.cat}">` : `<small>${m.date.split('-').reverse().join('/')}</small><br><b>${m.cat}</b>`}</td>
                 <td style="text-align:right; color:${m.type==='entrata'?'green':'red'}">
-                    ${isE ? `<input type="number" id="ea-${realIdx}" value="${m.amt}">` : `<b>${m.type==='entrata'?'+':'-'}${fmt(m.amt)}</b>`}
+                    ${isE ? `<input type="number" id="ea-${idx}" value="${m.amt}">` : `<b>${m.type==='entrata'?'+':'-'}${fmt(m.amt)}</b>`}
                 </td>
                 <td style="text-align:right">
-                    <button class="btn-icon" onclick="${isE ? `saveM(${realIdx})` : `toggleEdit(${realIdx})`}">${isE ? '💾' : '✏️'}</button>
-                    <button class="btn-icon" onclick="delM(${realIdx})">🗑️</button>
+                    <button class="btn-icon" onclick="${isE ? `saveM(${idx})` : `toggleEditM(${idx})`}">${isE ? '💾' : '✏️'}</button>
+                    <button class="btn-icon" onclick="delM(${idx})">🗑️</button>
                 </td>
             </tr>`;
         }).join('');
-        updateChart(d.avail);
-        localStorage.setItem('cashflow_master_v132', JSON.stringify(state));
+        updateChart(d.avail); saveData();
     }
 
     function sendToAntonella() {
-        const d = calculate();
+        const d = getCalculatedData();
         const msg = `🏖️ *REPORT CASHFLOW*\n\n💳 *Reale:* ${fmt(d.bancaBal)}\n🏁 *Previsto:* ${fmt(d.avail)}\n💎 *Risparmio:* ${fmt(state.sBal)}\n🛍️ *Tempo Libero:* ${fmt(d.residuoTempo)}`;
         window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`);
     }
@@ -236,40 +245,54 @@
             date: document.getElementById('mDate').value,
             source: document.getElementById('mSource').value,
             type: document.getElementById('mType').value,
-            mTag: document.getElementById('mTag').value,
+            tag: document.getElementById('mTag').value,
             amt: Number(document.getElementById('mAmt').value),
             cat: document.getElementById('mCat').value
         });
         render(); e.target.reset(); document.getElementById('mDate').valueAsDate = new Date();
     };
 
-    function addFissa() {
-        const name = prompt("Nome:"); const amt = prompt("Importo:"); const day = prompt("Giorno:");
-        if (name && amt && day) { state.fisse.push({name, amt, day}); render(); }
-    }
-
-    function editManual(type) {
+    function editManualBalance(type) {
         const n = prompt("Valore €:");
         if (n !== null) {
-            if (type === 'save') state.sBal = parseFloat(n.replace(',', '.')) || 0;
-            else state.cashManual = parseFloat(n.replace(',', '.')) || 0;
+            const val = parseFloat(n.replace(',', '.'));
+            if (type === 'save') state.sBal = isNaN(val) ? 0 : val;
+            else state.cashManual = isNaN(val) ? 0 : val;
             render();
         }
     }
 
-    function toggleEdit(i) { editingId = (editingId === i) ? null : i; render(); }
+    function toggleEditM(i) { editingId = (editingId === i) ? null : i; render(); }
     function saveM(i) {
         state.movs[i].cat = document.getElementById(`ec-${i}`).value;
         state.movs[i].amt = Number(document.getElementById(`ea-${i}`).value);
         editingId = null; render();
     }
-    function delM(i) { if(confirm("Eliminare?")) { state.movs.splice(i,1); render(); } }
-    function delFissa(i) { if(confirm("Eliminare?")) { state.fisse.splice(i,1); render(); } }
+
+    document.getElementById('budForm').onsubmit = e => {
+        e.preventDefault();
+        state.buds.push({ cat: document.getElementById('bCat').value, amt: Number(document.getElementById('bAmt').value), day: document.getElementById('bDay').value });
+        render(); e.target.reset();
+    };
+
+    function showDetail(type) {
+        const d = getCalculatedData(); let t = "", b = "";
+        if(type==='gap') {
+            t="Dettaglio GAP";
+            b = `<div class="detail-row"><span>Saldo Reale Oggi:</span><b>${fmt(d.bancaBal)}</b></div>`;
+            d.futureDetails.forEach(v => { b += `<div class="detail-row" style="color:${v.amt>0?'green':'red'}"><span>${v.cat}:</span><b>${v.amt>0?'+':''}${fmt(v.amt)}</b></div>`; });
+            b += `<div style="margin-top:15px; border-top:2px solid #eee; padding-top:10px" class="detail-row"><span><b>PREVISTO:</b></span><b>${fmt(d.avail)}</b></div>`;
+        }
+        document.getElementById('modalTitle').innerText = t; document.getElementById('modalBody').innerHTML = b; document.getElementById('modal').style.display = 'flex';
+    }
+
     function closeModal() { document.getElementById('modal').style.display = 'none'; }
+    function delM(i) { if(confirm("Eliminare?")) { state.movs.splice(i,1); render(); } }
+    function delB(i) { if(confirm("Eliminare?")) { state.buds.splice(i,1); render(); } }
     function exportData() { const b = new Blob([JSON.stringify(state)], {type:'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'backup.json'; a.click(); }
     function importData(e) { const r = new FileReader(); r.onload = x => { state = JSON.parse(x.target.result); render(); }; r.readAsText(e.target.files[0]); }
     
-    init();
+    loadData();
 </script>
 </body>
 </html>
