@@ -158,7 +158,7 @@
     const fmt = n => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(isNaN(n) ? 0 : n);
     const CONFIG = { stip15: 1650, stip30: 1650, warningLevel: 800 };
 
-    let state = { movs: [], buds: [], sBal: 0, cashManual: null };
+    let state = { movs: [], buds: [], sBal: 0, cashManual: null, lastManualDate: null };
     let editingId = null; let editingBudId = null; let chart; let gaugeChart;
 
     function loadData() {
@@ -176,12 +176,23 @@
         const curMonth = todayStr.slice(0, 7);
         const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
         
+        // Calcolo Banca
         const bancaBal = state.movs
             .filter(m => m.source === 'banca' && m.date <= todayStr)
             .reduce((s, m) => s + (m.type === 'entrata' ? Number(m.amt) : -Number(m.amt)), 0);
         
-        // Calcolo dinamico contante
-        const cashBal = (state.cashManual !== null) ? state.cashManual : state.movs.filter(m => m.source === 'contanti' && m.date <= todayStr).reduce((s, m) => s + (m.type === 'entrata' ? Number(m.amt) : -Number(m.amt)), 0);
+        // Calcolo Contante (Cassa) migliorato
+        let cashBal = 0;
+        if (state.cashManual !== null) {
+            // Se c'è un saldo manuale, partiamo da quello e sommiamo solo i movimenti successivi alla data di inserimento manuale
+            cashBal = state.cashManual;
+            state.movs.filter(m => m.source === 'contanti' && m.date > state.lastManualDate && m.date <= todayStr).forEach(m => {
+                cashBal += (m.type === 'entrata' ? Number(m.amt) : -Number(m.amt));
+            });
+        } else {
+            // Altrimenti calcoliamo tutto lo storico
+            cashBal = state.movs.filter(m => m.source === 'contanti' && m.date <= todayStr).reduce((s, m) => s + (m.type === 'entrata' ? Number(m.amt) : -Number(m.amt)), 0);
+        }
         
         const tempoMovs = state.movs.filter(m => m.date.slice(0,7) === curMonth && (m.tag === 'svago' || m.cat.toLowerCase().includes('svago')));
         const spesoTempo = tempoMovs.reduce((s, m) => s + Number(m.amt), 0);
@@ -267,14 +278,8 @@
             state.sBal += amt; 
             state.movs.push({date:dStr, source:'banca', type:'uscita', amt, cat:"💎 Risparmio", tag:"ordinaria"}); 
         } else { 
-            // PRELIEVO AUTOMATICO
             state.movs.push({date:dStr, source:'banca', type:'uscita', amt, cat:"🏧 Prelievo", tag:"ordinaria"}); 
             state.movs.push({date:dStr, source:'contanti', type:'entrata', amt, cat:"💵 Carico", tag:"ordinaria"}); 
-            
-            // Se c'è un saldo manuale, lo aggiorniamo sommando il prelievo
-            if(state.cashManual !== null) {
-                state.cashManual += amt;
-            }
         } 
         render(); 
     }
@@ -286,11 +291,14 @@
         } else {
             const current = getCalculatedData().cashBal;
             const n = prompt("Contante attuale (fisico nel portafoglio):", current); 
-            if(n !== null) { state.cashManual = parseFloat(n.replace(',', '.')) || 0; render(); }
+            if(n !== null) { 
+                state.cashManual = parseFloat(n.replace(',', '.')) || 0; 
+                state.lastManualDate = new Date().toISOString().split('T')[0];
+                render(); 
+            }
         } 
     }
 
-    // ... Tutte le altre funzioni (showDetail, updateGauge, etc) rimangono uguali ...
     function showDetail(type) {
         const d = getCalculatedData(); let t = "", b = "";
         if(type==='gap') {
@@ -305,6 +313,7 @@
         }
         document.getElementById('modalTitle').innerText = t; document.getElementById('modalBody').innerHTML = b; document.getElementById('detailModal').style.display = 'flex';
     }
+
     function updateGauge(val) {
         const ctx = document.getElementById('gaugeChart').getContext('2d'); if(gaugeChart) gaugeChart.destroy();
         document.getElementById('gaugeLabel').textContent = `${Math.round(val)}%`;
@@ -318,7 +327,23 @@
     function toggleEditBud(i) { editingBudId = (editingBudId === i) ? null : i; render(); }
     function saveBud(i) { state.buds[i].cat = document.getElementById(`eb-cat-${i}`).value; state.buds[i].amt = Number(document.getElementById(`eb-amt-${i}`).value); state.buds[i].day = document.getElementById(`eb-day-${i}`).value; editingBudId = null; render(); }
     function updateChart(projection) { const ctx = document.getElementById('balanceChart').getContext('2d'); if(chart) chart.destroy(); chart = new Chart(ctx, { type: 'line', data: { labels: projection.map(p => p.day), datasets: [{ label: 'Proiezione', data: projection.map(p => p.balance), borderColor: '#01696f', fill: true, backgroundColor: 'rgba(1, 105, 92, 0.05)', tension: 0.3 }, { label: 'Soglia 800€', data: Array(projection.length).fill(CONFIG.warningLevel), borderColor: '#ef4444', borderWidth: 2, borderDash: [5, 5], pointRadius: 0, fill: false }] }, options: { responsive: true, plugins: { legend: { display: false } } } }); }
-    document.getElementById('movForm').onsubmit = e => { e.preventDefault(); state.movs.push({ date: document.getElementById('mDate').value, source: document.getElementById('mSource').value, type: document.getElementById('mType').value, amt: Number(document.getElementById('mAmt').value), tag: document.getElementById('mTag').value, cat: document.getElementById('mCat').value }); render(); e.target.reset(); document.getElementById('mDate').valueAsDate = new Date(); };
+
+    document.getElementById('movForm').onsubmit = e => { 
+        e.preventDefault(); 
+        const m = { 
+            date: document.getElementById('mDate').value, 
+            source: document.getElementById('mSource').value, 
+            type: document.getElementById('mType').value, 
+            amt: Number(document.getElementById('mAmt').value), 
+            tag: document.getElementById('mTag').value, 
+            cat: document.getElementById('mCat').value 
+        };
+        state.movs.push(m);
+        render(); 
+        e.target.reset(); 
+        document.getElementById('mDate').valueAsDate = new Date(); 
+    };
+
     document.getElementById('budForm').onsubmit = e => { e.preventDefault(); state.buds.push({ cat: document.getElementById('bCat').value, amt: Number(document.getElementById('bAmt').value), day: document.getElementById('bDay').value }); render(); e.target.reset(); };
     function exportData() { const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'cashflow_backup.json'; a.click(); }
     function importData(e) { const r = new FileReader(); r.onload = x => { state = JSON.parse(x.target.result); render(); }; r.readAsText(e.target.files[0]); }
