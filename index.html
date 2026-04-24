@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-title" content="CashflowVacanze">
   <link rel="apple-touch-icon" href="https://img.icons8.com/fluency/96/beach-umbrella.png">
   
-  <title>Gestione Cashflow & Target Vacanze v127</title>
+  <title>Gestione Cashflow & Target Vacanze v127.1</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -17,7 +17,7 @@
     body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; padding: 0.5rem; }
     .container { max-width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 0.8rem; }
     
-    .banner { display: none; padding: 0.8rem; border-radius: 0.75rem; font-weight: 800; font-size: 0.75rem; text-align: center; margin-bottom: 0.2rem; animation: pulse 2s infinite; border: 2px solid; }
+    .banner { display: none; padding: 0.8rem; border-radius: 0.75rem; font-weight: 800; font-size: 0.75rem; text-align: center; margin-bottom: 0.2rem; border: 2px solid; animation: pulse 2s infinite; }
     .banner-warning { display: block; background: #fef2f2; border-color: #ef4444; color: #991b1b; }
     .banner-thursday { display: block; background: #fef9c3; border-color: #facc15; color: #854d0e; }
     
@@ -107,7 +107,7 @@
     <div class="card"><h2 class="section-title">Proiezione Mensile</h2><canvas id="balanceChart" height="150"></canvas></div>
 
     <div class="card">
-        <h2 class="section-title">Spese Fisse</h2>
+        <h2 class="section-title">Spese Fisse (Mensili)</h2>
         <form id="budForm" style="display:flex; gap:5px; margin-bottom:10px">
             <input type="text" id="bCat" placeholder="Nome" required style="flex:2"><input type="number" id="bAmt" placeholder="€" required style="flex:1"><input type="number" id="bDay" placeholder="GG" required min="1" max="31" style="flex:0.6"><button type="submit" style="flex:0.6; background:var(--accent); color:white; border:none; border-radius:8px">+</button>
         </form>
@@ -140,7 +140,7 @@
         <input type="text" id="searchInput" placeholder="Cerca..." onkeyup="render()">
         <table class="table"><tbody id="rows"></tbody></table>
         <div style="display:flex; gap:8px; margin-top:10px">
-            <button onclick="exportData()" style="background:#eee; font-size:0.7rem; flex:1">ESPORTA JSON</button>
+            <button onclick="exportData()" style="background:#eee; font-size:0.7rem; flex:1">ESPORTA BACKUP</button>
             <button onclick="document.getElementById('importFile').click()" style="background:#eee; font-size:0.7rem; flex:1">IMPORTA</button>
         </div>
         <input type="file" id="importFile" style="display:none" onchange="importData(event)">
@@ -189,7 +189,7 @@
                 const val = (m.type === 'entrata' ? Number(m.amt) : -Number(m.amt));
                 runningBalance += val; futureDetails.push({ cat: m.cat, amt: val });
             });
-            if (d === 15 && !state.movs.some(m => m.date.slice(0,7) === curMonth && m.date.includes('-15') && m.tag === 'stipendio')) { runningBalance += CONFIG.stip15; futureDetails.push({ cat: "Stipendio 15 (Est.)", amt: CONFIG.stip15 }); }
+            if (d === 15 && !state.movs.some(m => m.date.slice(0,7) === curMonth && m.date.endsWith('-15') && m.tag === 'stipendio')) { runningBalance += CONFIG.stip15; futureDetails.push({ cat: "Stipendio 15 (Est.)", amt: CONFIG.stip15 }); }
             if (d === lastDay && !state.movs.some(m => m.date.slice(0,7) === curMonth && parseInt(m.date.slice(-2)) >= 28 && m.tag === 'stipendio')) { runningBalance += CONFIG.stip30; futureDetails.push({ cat: "Stipendio 30 (Est.)", amt: CONFIG.stip30 }); }
             state.buds.forEach(f => { if (parseInt(f.day) === d && !state.movs.some(m => m.date.slice(0,7) === curMonth && m.cat.toLowerCase().includes(f.cat.toLowerCase()))) { runningBalance -= Number(f.amt); futureDetails.push({ cat: "Fissa: " + f.cat, amt: -Number(f.amt) }); } });
             dailyProjection.push({ day: d, balance: runningBalance });
@@ -203,8 +203,8 @@
         
         const banner = document.getElementById('dynamicBanner');
         const isThursday = new Date().getDay() === 4;
-        if (d.avail < CONFIG.warningLevel) { banner.className = "banner banner-warning"; banner.textContent = "⚠️ ATTENZIONE: Il saldo previsto scenderà sotto gli 800 €!"; }
-        else if (isThursday) { banner.className = "banner banner-thursday"; banner.textContent = "📅 È Giovedì: Aggiorna il saldo con Antonella! 🏖️"; }
+        if (d.avail < CONFIG.warningLevel) { banner.className = "banner banner-warning"; banner.innerText = `🚨 ALERT: Saldo previsto a ${fmt(d.avail)}!`; }
+        else if (isThursday) { banner.className = "banner banner-thursday"; banner.innerText = "📅 Giovedì: Check con Antonella! 🏖️"; }
         else { banner.className = "banner"; }
 
         document.getElementById('actBal').textContent = fmt(d.bancaBal);
@@ -219,19 +219,19 @@
         document.getElementById('budList').innerHTML = state.buds.map((f, i) => `
             <div class="detail-row" style="background:white; padding:10px; border-radius:10px; margin-bottom:5px">
                 <span><b>${f.cat}</b> (gg ${f.day})</span>
-                <span><b style="color:var(--out)">${fmt(f.amt)}</b> <button class="btn-icon" onclick="delB(${i})">🗑️</button></span>
+                <span><b>${fmt(f.amt)}</b> 
+                  <button class="btn-icon" onclick="editFissa(${i})">✏️</button>
+                  <button class="btn-icon" onclick="delB(${i})">🗑️</button>
+                </span>
             </div>`).join('');
 
         const filt = state.movs.filter(m => m.cat.toLowerCase().includes(q)).sort((a,b) => new Date(b.date) - new Date(a.date));
         document.getElementById('rows').innerHTML = filt.slice(0,10).map((m) => {
-            const idx = state.movs.indexOf(m); const isE = editingId === idx;
+            const idx = state.movs.indexOf(m);
             return `<tr>
-                <td>${isE ? `<input type="date" id="ed-${idx}" value="${m.date}"><br><input id="ec-${idx}" value="${m.cat}">` : `<small>${m.date.split('-').reverse().join('/')}</small><br><b>${m.cat}</b>`}</td>
-                <td style="text-align:right" class="${m.type}">${isE ? `<input type="number" id="ea-${idx}" value="${m.amt}">` : (m.type==='entrata'?'+':'-')+fmt(m.amt)}</td>
-                <td style="text-align:right">
-                    <button class="btn-icon" onclick="${isE ? `saveM(${idx})` : `toggleEditM(${idx})`}">${isE ? '💾' : '✏️'}</button>
-                    <button class="btn-icon" onclick="delM(${idx})">🗑️</button>
-                </td>
+                <td><small>${m.date.split('-').reverse().join('/')}</small><br><b>${m.cat}</b></td>
+                <td style="text-align:right" class="${m.type}"><b>${m.type==='entrata'?'+':'-'}${fmt(m.amt)}</b></td>
+                <td style="text-align:right"><button class="btn-icon" onclick="delM(${idx})">🗑️</button></td>
             </tr>`;
         }).join('');
         updateChart(d.dailyProjection); saveData();
@@ -239,55 +239,8 @@
 
     function sendToAntonella() {
         const d = getCalculatedData();
-        const msg = `🏖️ *Aggiornamento Cashflow Davide & Antonella* 🏖️\n\n` +
-                    `💳 *Saldo Reale Oggi:* ${fmt(d.bancaBal)}\n` +
-                    `🏁 *Disponibile Fine Mese:* ${fmt(d.avail)}\n` +
-                    `💎 *Risparmio Accantonato:* ${fmt(state.sBal)}\n` +
-                    `🛍️ *Residuo Tempo Libero:* ${fmt(d.residuoTempo)}\n\n` +
-                    `_Dati aggiornati al ${new Date().toLocaleDateString('it-IT')}_`;
-        window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
-    }
-
-    function showDetail(type) {
-        const d = getCalculatedData(); let t = "", b = "";
-        if(type==='gap') {
-            t="Voci nel Disponibile";
-            b = `<div class="detail-row"><span>Saldo Reale Oggi:</span><b>${fmt(d.bancaBal)}</b></div>`;
-            d.futureDetails.forEach(v => { b += `<div class="detail-row" style="color:${v.amt>0?'green':'red'}"><span>${v.cat}:</span><b>${v.amt>0?'+':''}${fmt(v.amt)}</b></div>`; });
-            b += `<div style="margin-top:15px; border-top:2px solid #eee; padding-top:10px" class="detail-row"><span><b>TOTALE FINE MESE:</b></span><b>${fmt(d.avail)}</b></div>`;
-        } else if(type==='tempo') {
-            t="Dettaglio Tempo Libero";
-            b += d.tempoMovs.map(m => `<div class="detail-row"><span>${m.cat}</span><span style="color:red">-${fmt(m.amt)}</span></div>`).join('');
-            b += `<div class="detail-row" style="margin-top:10px; font-weight:800"><span>Rimanente:</span><span>${fmt(d.residuoTempo)}</span></div>`;
-        }
-        document.getElementById('modalTitle').innerText = t; document.getElementById('modalBody').innerHTML = b; document.getElementById('detailModal').style.display = 'flex';
-    }
-
-    function updateGauge(val) {
-        const ctx = document.getElementById('gaugeChart').getContext('2d'); if(gaugeChart) gaugeChart.destroy();
-        document.getElementById('gaugeLabel').textContent = `${Math.round(val)}%`;
-        gaugeChart = new Chart(ctx, { type: 'doughnut', data: { datasets: [{ data: [val, 100 - val], backgroundColor: ['#10b981', '#e2e8f0'], borderWidth: 0, circumference: 180, rotation: 270, cutout: '80%' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
-    }
-
-    function closeModal() { document.getElementById('detailModal').style.display = 'none'; }
-    function delM(i) { if(confirm("Eliminare?")) { state.movs.splice(i,1); render(); } }
-    function delB(i) { if(confirm("Eliminare?")) { state.buds.splice(i,1); render(); } }
-    function toggleEditM(i) { editingId = (editingId === i) ? null : i; render(); }
-    function saveM(i) { 
-        state.movs[i].date = document.getElementById(`ed-${i}`).value;
-        state.movs[i].cat = document.getElementById(`ec-${i}`).value;
-        state.movs[i].amt = Number(document.getElementById(`ea-${i}`).value);
-        editingId = null; render(); 
-    }
-    function editManualBalance(type) { 
-        if(type==='save'){
-            const n = prompt("Risparmio attuale:", state.sBal); 
-            if(n !== null) { state.sBal = parseFloat(n.replace(',', '.')) || 0; render(); }
-        } else {
-            const current = getCalculatedData().cashBal;
-            const n = prompt("Contante attuale:", current); 
-            if(n !== null) { state.cashManual = parseFloat(n.replace(',', '.')) || 0; render(); }
-        } 
+        const msg = `🏖️ *REPORT CASHFLOW*\n\n💳 *Reale:* ${fmt(d.bancaBal)}\n🏁 *Previsto:* ${fmt(d.avail)}\n💎 *Risparmio:* ${fmt(state.sBal)}\n🛍️ *Tempo Libero:* ${fmt(d.residuoTempo)}`;
+        window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`);
     }
 
     function updateChart(projection) {
@@ -305,10 +258,37 @@
         });
     }
 
-    document.getElementById('movForm').onsubmit = e => { e.preventDefault(); state.movs.push({ date: document.getElementById('mDate').value, source: document.getElementById('mSource').value, type: document.getElementById('mType').value, amt: Number(document.getElementById('mAmt').value), tag: document.getElementById('mTag').value, cat: document.getElementById('mCat').value }); render(); e.target.reset(); document.getElementById('mDate').valueAsDate = new Date(); };
+    function editFissa(i) {
+      const f = state.buds[i];
+      const newName = prompt("Modifica nome spesa:", f.cat);
+      const newAmt = prompt("Modifica importo €:", f.amt);
+      const newDay = prompt("Modifica giorno (1-31):", f.day);
+      if (newName !== null && newAmt !== null && newDay !== null) {
+        state.buds[i] = { cat: newName, amt: Number(newAmt), day: Number(newDay) };
+        render();
+      }
+    }
+
+    function updateGauge(val) {
+        const ctx = document.getElementById('gaugeChart').getContext('2d'); if(gaugeChart) gaugeChart.destroy();
+        gaugeChart = new Chart(ctx, { type: 'doughnut', data: { datasets: [{ data: [val, 100 - val], backgroundColor: ['#10b981', '#e2e8f0'], borderWidth: 0, circumference: 180, rotation: 270, cutout: '80%' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
+        document.getElementById('gaugeLabel').textContent = `${Math.round(val)}%`;
+    }
+
+    document.getElementById('movForm').onsubmit = e => { e.preventDefault(); state.movs.push({ date: document.getElementById('mDate').value, source: document.getElementById('mSource').value, type: document.getElementById('mType').value, tag: document.getElementById('mTag').value, amt: Number(document.getElementById('mAmt').value), cat: document.getElementById('mCat').value }); render(); e.target.reset(); document.getElementById('mDate').valueAsDate = new Date(); };
     document.getElementById('budForm').onsubmit = e => { e.preventDefault(); state.buds.push({ cat: document.getElementById('bCat').value, amt: Number(document.getElementById('bAmt').value), day: document.getElementById('bDay').value }); render(); e.target.reset(); };
     
-    function exportData() { const a = document.createElement('a'); a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state)); a.download = 'cashflow_backup.json'; a.click(); }
+    function editManualBalance(type) { const n = prompt("Valore €:"); if(n !== null) { const val = parseFloat(n.replace(',', '.')); if(type==='save') state.sBal = isNaN(val) ? 0 : val; else state.cashManual = isNaN(val) ? 0 : val; render(); } }
+    function showDetail(type) {
+        const d = getCalculatedData(); let t = "", b = "";
+        if(type==='gap') { t="Dettaglio GAP"; b = `<div class="detail-row"><span>Saldo Reale Oggi:</span><b>${fmt(d.bancaBal)}</b></div>`; d.futureDetails.forEach(v => { b += `<div class="detail-row" style="color:${v.amt>0?'green':'red'}"><span>${v.cat}:</span><b>${v.amt>0?'+':''}${fmt(v.amt)}</b></div>`; }); b += `<div style="margin-top:15px; border-top:2px solid #eee; padding-top:10px" class="detail-row"><span><b>FINE MESE:</b></span><b>${fmt(d.avail)}</b></div>`; }
+        else if(type==='tempo') { t="Tempo Libero"; b += d.tempoMovs.map(m => `<div class="detail-row"><span>${m.cat}</span><span style="color:red">-${fmt(m.amt)}</span></div>`).join(''); b += `<div class="detail-row" style="margin-top:10px; font-weight:800"><span>Residuo:</span><span>${fmt(d.residuoTempo)}</span></div>`; }
+        document.getElementById('modalTitle').innerText = t; document.getElementById('modalBody').innerHTML = b; document.getElementById('detailModal').style.display = 'flex';
+    }
+    function closeModal() { document.getElementById('detailModal').style.display = 'none'; }
+    function delM(i) { if(confirm("Eliminare?")) { state.movs.splice(i,1); render(); } }
+    function delB(i) { if(confirm("Eliminare?")) { state.buds.splice(i,1); render(); } }
+    function exportData() { const b = new Blob([JSON.stringify(state)], {type:'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'backup.json'; a.click(); }
     function importData(e) { const r = new FileReader(); r.onload = x => { state = JSON.parse(x.target.result); render(); }; r.readAsText(e.target.files[0]); }
     loadData();
 </script>
