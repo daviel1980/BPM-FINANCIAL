@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-title" content="CashflowVacanze">
   <link rel="apple-touch-icon" href="https://img.icons8.com/fluency/96/beach-umbrella.png">
   
-  <title>Gestione Cashflow & Target Vacanze v127</title>
+  <title>Gestione Cashflow Davide & Antonella v128</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -17,11 +17,12 @@
     body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; padding: 0.5rem; }
     .container { max-width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 0.8rem; }
     
-    .banner { display: none; padding: 0.8rem; border-radius: 0.75rem; font-weight: 800; font-size: 0.75rem; text-align: center; margin-bottom: 0.2rem; animation: pulse 2s infinite; border: 2px solid; }
-    .banner-warning { display: block; background: #fef2f2; border-color: #ef4444; color: #991b1b; }
-    .banner-thursday { display: block; background: #fef9c3; border-color: #facc15; color: #854d0e; }
+    /* Gestione Banner */
+    .banner { display: none; padding: 0.9rem; border-radius: 0.75rem; font-weight: 800; font-size: 0.75rem; text-align: center; margin-bottom: 0.2rem; animation: pulse 2s infinite; border: 2px solid; }
+    .banner-critical { display: block !important; background: #fee2e2; border-color: #ef4444; color: #991b1b; box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.1); }
+    .banner-normal { display: block !important; background: #fef9c3; border-color: #facc15; color: #854d0e; }
     
-    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.8; } 100% { opacity: 1; } }
+    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.01); } 100% { transform: scale(1); } }
 
     .header-card { background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: white; padding: 1.2rem; border-radius: 1.2rem; text-align: center; }
     .logo-svg { width: 45px; height: 45px; margin-bottom: 5px; }
@@ -34,11 +35,8 @@
     
     .border-banca { border-left: 5px solid var(--in); }
     .border-disp { border-left: 5px solid #8b5cf6; background: #f5f3ff; }
-    .border-save { border-left: 5px solid var(--save); }
-    .border-cash { border-left: 5px solid var(--cash); }
-    .border-tempo { border-left: 5px solid var(--varie); grid-column: span 2; background: #fff1f2; }
-
-    .btn-wa { background: var(--wa); color: white; border: none; padding: 0.8rem; border-radius: 0.8rem; font-weight: 800; cursor: pointer; width: 100%; margin-top: 0.5rem; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.85rem; }
+    
+    .btn-wa { background: var(--wa); color: white; border: none; padding: 0.9rem; border-radius: 0.8rem; font-weight: 800; cursor: pointer; width: 100%; margin-top: 0.2rem; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.2); }
 
     .card { background: var(--card); padding: 1.2rem; border-radius: 1.1rem; border: 1px solid var(--border); }
     .section-title { margin: 0 0 1rem 0; font-size: 0.75rem; font-weight: 800; color: var(--accent); text-transform: uppercase; border-left: 4px solid var(--accent); padding-left: 10px; }
@@ -52,12 +50,6 @@
     
     .table { width: 100%; border-collapse: collapse; }
     .table td { padding: 0.8rem 0.2rem; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
-    .money.in { color: var(--in); font-weight: 800; }
-    .money.out { color: var(--out); font-weight: 800; }
-
-    .modal { display: none; position: fixed; z-index: 9999; left:0; top:0; width:100%; height:100%; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; backdrop-filter: blur(5px); }
-    .modal-content { background: white; padding: 1.5rem; border-radius: 1.5rem; width: 88%; max-width: 450px; max-height: 80vh; overflow-y: auto; }
-    .detail-row { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 8px 0; border-bottom: 1px dashed #eee; }
     .btn-icon { background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 4px; }
   </style>
 </head>
@@ -78,11 +70,11 @@
     <div class="stats-grid">
         <div class="stat-card border-banca" onclick="showDetail('banca')"><span class="stat-label">SALDO REALE 💳</span><div id="actBal" class="stat-value">0 €</div></div>
         <div class="stat-card border-disp" onclick="showDetail('gap')"><span class="stat-label">DISPONIBILE (GAP) 🏁</span><div id="curBal" class="stat-value">0 €</div></div>
-        <div class="stat-card border-save" onclick="showDetail('risparmio')">
+        <div class="stat-card border-save" onclick="showDetail('risparmio')" style="border-left: 5px solid var(--save);">
             <div style="position:absolute; top:8px; right:8px"><button class="btn-icon" onclick="event.stopPropagation(); editManualBalance('save')">✏️</button></div>
             <span class="stat-label">RISPARMIO 💎</span><div id="savBal" class="stat-value">0 €</div>
         </div>
-        <div class="stat-card border-cash" onclick="showDetail('cassa')">
+        <div class="stat-card border-cash" onclick="showDetail('cassa')" style="border-left: 5px solid var(--cash);">
             <div style="position:absolute; top:8px; right:8px"><button class="btn-icon" onclick="event.stopPropagation(); editManualBalance('cash')">✏️</button></div>
             <span class="stat-label">CONTANTE 💵</span><div id="cashBal" class="stat-value">0 €</div>
         </div>
@@ -201,11 +193,19 @@
         const d = getCalculatedData();
         const q = (document.getElementById('searchInput').value || "").toLowerCase();
         
+        // LOGICA BANNER PRIORITARIA
         const banner = document.getElementById('dynamicBanner');
         const isThursday = new Date().getDay() === 4;
-        if (d.avail < CONFIG.warningLevel) { banner.className = "banner banner-warning"; banner.textContent = "⚠️ ATTENZIONE: Il saldo previsto scenderà sotto gli 800 €!"; }
-        else if (isThursday) { banner.className = "banner banner-thursday"; banner.textContent = "📅 È Giovedì: Aggiorna il saldo con Antonella! 🏖️"; }
-        else { banner.className = "banner"; }
+        
+        if (d.avail < CONFIG.warningLevel) {
+            banner.className = "banner banner-critical";
+            banner.innerHTML = `⚠️ <b>ALLERTA CRITICA:</b> Saldo previsto fine mese (${fmt(d.avail)}) sotto la soglia di sicurezza!`;
+        } else if (isThursday) {
+            banner.className = "banner banner-normal";
+            banner.innerHTML = `📅 <b>GIORNO DI CHECK:</b> Aggiorna il saldo reale insieme ad Antonella! 🏖️`;
+        } else {
+            banner.className = "banner";
+        }
 
         document.getElementById('actBal').textContent = fmt(d.bancaBal);
         document.getElementById('curBal').textContent = fmt(d.avail);
@@ -239,22 +239,22 @@
 
     function sendToAntonella() {
         const d = getCalculatedData();
-        const msg = `🏖️ *Aggiornamento Cashflow Davide & Antonella* 🏖️\n\n` +
-                    `💳 *Saldo Reale Oggi:* ${fmt(d.bancaBal)}\n` +
-                    `🏁 *Disponibile Fine Mese:* ${fmt(d.avail)}\n` +
-                    `💎 *Risparmio Accantonato:* ${fmt(state.sBal)}\n` +
-                    `🛍️ *Residuo Tempo Libero:* ${fmt(d.residuoTempo)}\n\n` +
-                    `_Dati aggiornati al ${new Date().toLocaleDateString('it-IT')}_`;
+        const msg = `🏖️ *REPORT CASHFLOW* 🏖️\n\n` +
+                    `💳 *Saldo Reale:* ${fmt(d.bancaBal)}\n` +
+                    `🏁 *Previsto Fine Mese:* ${fmt(d.avail)}\n` +
+                    `💎 *Risparmio:* ${fmt(state.sBal)}\n` +
+                    `🛍️ *Tempo Libero:* ${fmt(d.residuoTempo)}\n\n` +
+                    `_Check del ${new Date().toLocaleDateString('it-IT')}_`;
         window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
     }
 
     function showDetail(type) {
         const d = getCalculatedData(); let t = "", b = "";
         if(type==='gap') {
-            t="Voci nel Disponibile";
+            t="Dettaglio Disponibile (GAP)";
             b = `<div class="detail-row"><span>Saldo Reale Oggi:</span><b>${fmt(d.bancaBal)}</b></div>`;
             d.futureDetails.forEach(v => { b += `<div class="detail-row" style="color:${v.amt>0?'green':'red'}"><span>${v.cat}:</span><b>${v.amt>0?'+':''}${fmt(v.amt)}</b></div>`; });
-            b += `<div style="margin-top:15px; border-top:2px solid #eee; padding-top:10px" class="detail-row"><span><b>TOTALE FINE MESE:</b></span><b>${fmt(d.avail)}</b></div>`;
+            b += `<div style="margin-top:15px; border-top:2px solid #eee; padding-top:10px" class="detail-row"><span><b>PREVISTO FINE MESE:</b></span><b>${fmt(d.avail)}</b></div>`;
         } else if(type==='tempo') {
             t="Dettaglio Tempo Libero";
             b += d.tempoMovs.map(m => `<div class="detail-row"><span>${m.cat}</span><span style="color:red">-${fmt(m.amt)}</span></div>`).join('');
@@ -273,12 +273,7 @@
     function delM(i) { if(confirm("Eliminare?")) { state.movs.splice(i,1); render(); } }
     function delB(i) { if(confirm("Eliminare?")) { state.buds.splice(i,1); render(); } }
     function toggleEditM(i) { editingId = (editingId === i) ? null : i; render(); }
-    function saveM(i) { 
-        state.movs[i].date = document.getElementById(`ed-${i}`).value;
-        state.movs[i].cat = document.getElementById(`ec-${i}`).value;
-        state.movs[i].amt = Number(document.getElementById(`ea-${i}`).value);
-        editingId = null; render(); 
-    }
+    function saveM(i) { state.movs[i].date = document.getElementById(`ed-${i}`).value; state.movs[i].cat = document.getElementById(`ec-${i}`).value; state.movs[i].amt = Number(document.getElementById(`ea-${i}`).value); editingId = null; render(); }
     function editManualBalance(type) { 
         if(type==='save'){
             const n = prompt("Risparmio attuale:", state.sBal); 
