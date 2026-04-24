@@ -134,9 +134,10 @@
         <h2 class="section-title">Storico</h2>
         <input type="text" id="searchInput" placeholder="Cerca..." onkeyup="render()">
         <table class="table"><tbody id="rows"></tbody></table>
-        <div style="display:flex; gap:8px; margin-top:10px">
-            <button onclick="exportData()" style="background:#eee; font-size:0.7rem; flex:1">BACKUP JSON</button>
+        <div style="display:flex; gap:8px; margin-top:10px; flex-wrap: wrap;">
+            <button onclick="exportData()" style="background:#eee; font-size:0.7rem; flex:1">BACKUP</button>
             <button onclick="document.getElementById('importFile').click()" style="background:#eee; font-size:0.7rem; flex:1">IMPORTA</button>
+            <button onclick="clearHistory()" style="background:var(--out); color:white; font-size:0.7rem; flex:2; border:none;">🗑️ CANCELLA TUTTO</button>
         </div>
         <input type="file" id="importFile" style="display:none" onchange="importData(event)">
     </div>
@@ -154,7 +155,6 @@
     const fmt = n => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(isNaN(n) ? 0 : n);
     const CONFIG = { stip15: 1650, stip30: 1650, warningLevel: 800 };
 
-    // STATO INIZIALE
     let state = { movs: [], buds: [], sBal: 0, cashManual: null, lastCashSyncDate: null };
     let editingId = null; let editingBudId = null; let chart; let gaugeChart;
 
@@ -167,35 +167,45 @@
     }
     function saveData() { localStorage.setItem('cashflow_master_data', JSON.stringify(state)); }
 
+    function clearHistory() {
+        if(confirm("⚠️ Sei sicuro? Questo cancellerà permanentemente tutto lo storico dei movimenti!")) {
+            state.movs = [];
+            state.cashManual = null;
+            state.lastCashSyncDate = null;
+            render();
+        }
+    }
+
+    function delM(i) {
+        if(confirm("Eliminare questa operazione?")) {
+            state.movs.splice(i, 1);
+            render();
+        }
+    }
+
     function getCalculatedData() {
         const now = new Date();
         const todayStr = now.toISOString().split('T')[0];
         const curMonth = todayStr.slice(0, 7);
         const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
         
-        // 💳 CALCOLO BANCA
         const bancaBal = state.movs
             .filter(m => m.source === 'banca' && m.date <= todayStr)
             .reduce((s, m) => s + (m.type === 'entrata' ? Number(m.amt) : -Number(m.amt)), 0);
         
-        // 💵 CALCOLO CONTANTE (DINAMICO)
         let cashBal = 0;
         if (state.cashManual !== null) {
             cashBal = state.cashManual;
-            // Somma solo i movimenti "contanti" avvenuti DOPO l'ultima sincronizzazione manuale
             state.movs.filter(m => m.source === 'contanti' && m.date > state.lastCashSyncDate && m.date <= todayStr).forEach(m => {
                 cashBal += (m.type === 'entrata' ? Number(m.amt) : -Number(m.amt));
             });
         } else {
-            // Se non c'è mai stata sincronizzazione, calcola tutto lo storico contanti
             cashBal = state.movs.filter(m => m.source === 'contanti' && m.date <= todayStr).reduce((s, m) => s + (m.type === 'entrata' ? Number(m.amt) : -Number(m.amt)), 0);
         }
         
-        // 🛍️ CALCOLO TEMPO LIBERO
         const tempoMovs = state.movs.filter(m => m.date.slice(0,7) === curMonth && (m.tag === 'svago' || m.cat.toLowerCase().includes('svago')));
         const spesoTempo = tempoMovs.reduce((s, m) => s + Number(m.amt), 0);
 
-        // 🏁 CALCOLO DISPONIBILE (GAP)
         let runningBalance = bancaBal; let futureDetails = []; let dailyProjection = [];
         for (let d = now.getDate(); d <= lastDay; d++) {
             const dStr = curMonth + "-" + String(d).padStart(2, '0');
@@ -236,10 +246,13 @@
             return `<div class="detail-row"><span>${isE ? `<input id="eb-cat-${i}" class="edit-input" value="${f.cat}">` : f.cat}</span><span>${isE ? `<input type="number" id="eb-amt-${i}" class="edit-input" value="${f.amt}">` : fmt(f.amt)} <button onclick="${isE ? `saveBud(${i})` : `toggleEditBud(${i})`}">${isE?'💾':'✏️'}</button><button onclick="delB(${i})">🗑️</button></span></div>`;
         }).join('');
 
-        const filt = state.movs.filter(m => m.cat.toLowerCase().includes(q)).sort((a,b) => new Date(b.date) - new Date(a.date));
-        document.getElementById('rows').innerHTML = filt.slice(0,15).map((m) => {
-            const idx = state.movs.indexOf(m); const isE = editingId === idx;
-            return `<tr><td>${isE ? `<input type="date" id="ed-${idx}" value="${m.date}"><br><input id="ec-${idx}" value="${m.cat}">` : `<b>${m.cat}</b><br><small>${m.date} (${m.source})</small>`}</td><td class="${m.type}">${isE ? `<input type="number" id="ea-${idx}" value="${m.amt}">` : (m.type==='entrata'?'+':'-')+fmt(m.amt)}</td><td><button onclick="${isE ? `saveM(${idx})` : `toggleEditM(${idx})`}">${isE?'💾':'✏️'}</button></td></tr>`;
+        const filt = state.movs.map((m, originalIdx) => ({...m, originalIdx}))
+                         .filter(m => m.cat.toLowerCase().includes(q))
+                         .sort((a,b) => new Date(b.date) - new Date(a.date));
+
+        document.getElementById('rows').innerHTML = filt.slice(0,20).map((m) => {
+            const idx = m.originalIdx; const isE = editingId === idx;
+            return `<tr><td>${isE ? `<input type="date" id="ed-${idx}" value="${m.date}"><br><input id="ec-${idx}" value="${m.cat}">` : `<b>${m.cat}</b><br><small>${m.date} (${m.source})</small>`}</td><td class="${m.type}">${isE ? `<input type="number" id="ea-${idx}" value="${m.amt}">` : (m.type==='entrata'?'+':'-')+fmt(m.amt)}</td><td><button onclick="${isE ? `saveM(${idx})` : `toggleEditM(${idx})`}">${isE?'💾':'✏️'}</button>${!isE ? `<button onclick="delM(${idx})">🗑️</button>` : ''}</td></tr>`;
         }).join('');
         updateChart(d.dailyProjection); saveData();
     }
@@ -251,7 +264,6 @@
             state.sBal += amt;
             state.movs.push({date:dStr, source:'banca', type:'uscita', amt, cat:"💎 Risparmio", tag:"ordinaria"});
         } else if(action==='cash_in') {
-            // DOPPIO MOVIMENTO: Esce da banca, entra in cassa
             state.movs.push({date:dStr, source:'banca', type:'uscita', amt, cat:"🏧 Prelievo", tag:"ordinaria"});
             state.movs.push({date:dStr, source:'contanti', type:'entrata', amt, cat:"💵 Carico Cassa", tag:"ordinaria"});
         }
@@ -278,7 +290,6 @@
         window.open(`https://wa.me/?text=${msg}`, '_blank');
     }
 
-    // UTILS
     function updateGauge(val) {
         const ctx = document.getElementById('gaugeChart').getContext('2d'); if(gaugeChart) gaugeChart.destroy();
         document.getElementById('gaugeLabel').textContent = `${Math.round(val)}%`;
