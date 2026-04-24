@@ -23,6 +23,8 @@
     .header-card { background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: white; padding: 1.2rem; border-radius: 1.2rem; text-align: center; box-shadow: 0 4px 15px rgba(1, 105, 111, 0.2); }
     .logo-svg { width: 45px; height: 45px; margin-bottom: 5px; }
     .title { margin: 0; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+    
+    .btn-whatsapp { background: #25d366; color: white; border: none; padding: 8px 15px; border-radius: 20px; font-size: 0.7rem; font-weight: 800; margin-top: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
 
     .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
     .stat-card { background: var(--card); padding: 1rem; border-radius: 0.9rem; border: 1px solid var(--border); cursor: pointer; position: relative; }
@@ -72,6 +74,9 @@
             <path d="M20 75H80" stroke="white" stroke-width="4" stroke-linecap="round"/>
         </svg>
         <h1 class="title">Gestione Cashflow & Target Vacanze</h1>
+        <button onclick="sendWhatsAppReport()" class="btn-whatsapp">
+          <span>📲 INVIA REPORT WHATSAPP</span>
+        </button>
     </div>
 
     <div class="stats-grid">
@@ -175,7 +180,6 @@
             .filter(m => m.source === 'banca' && m.date <= todayStr)
             .reduce((s, m) => s + (m.type === 'entrata' ? Number(m.amt) : -Number(m.amt)), 0);
         
-        // FIX ZERO: Se cashManual è un numero (anche 0), usa quello. Se è null, calcola.
         const cashBal = (state.cashManual !== null) ? state.cashManual : state.movs.filter(m => m.source === 'contanti' && m.date <= todayStr).reduce((s, m) => s + (m.type === 'entrata' ? Number(m.amt) : -Number(m.amt)), 0);
         
         const tempoMovs = state.movs.filter(m => m.date.slice(0,7) === curMonth && (m.tag === 'svago' || m.cat.toLowerCase().includes('svago')));
@@ -250,6 +254,19 @@
         updateChart(d.dailyProjection); saveData();
     }
 
+    function sendWhatsAppReport() {
+        const d = getCalculatedData();
+        const dataOggi = new Date().toLocaleDateString('it-IT');
+        let msg = `*📊 REPORT CASHFLOW (${dataOggi})*%0A%0A`;
+        msg += `💳 *Saldo Reale:* ${fmt(d.bancaBal)}%0A`;
+        msg += `🏁 *Disp. Fine Mese:* ${fmt(d.avail)}%0A`;
+        msg += `💎 *Risparmio:* ${fmt(state.sBal)}%0A`;
+        msg += `💵 *Contante:* ${fmt(d.cashBal)}%0A`;
+        msg += `🛍️ *Budget Svago:* ${fmt(d.residuoTempo)}%0A%0A`;
+        msg += `_Efficienza Vacanze: ${Math.round(d.avail > 1000 ? 100 : (d.avail/1000)*100)}%_`;
+        window.open(`https://wa.me/?text=${msg}`, '_blank');
+    }
+
     function showDetail(type) {
         const d = getCalculatedData(); let t = "", b = "";
         if(type==='gap') {
@@ -302,7 +319,6 @@
             const n = prompt("Contante attuale:", current); 
             if(n !== null) { 
                 const val = parseFloat(n.replace(',', '.'));
-                // Imposta il valore, permettendo lo 0
                 state.cashManual = isNaN(val) ? 0 : val; 
                 render(); 
             }
