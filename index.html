@@ -151,7 +151,7 @@
 
 <script>
     const fmt = n => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(isNaN(n) ? 0 : n);
-    const CONFIG = { stip15: 1650, stip30: 1650, warningLevel: 800 };
+    const CONFIG = { stip15: 1650, stip30: 1750, warningLevel: 800 };
 
     let state = { movs: [], buds: [], sBal: 0, cashManual: null };
     let editingId = null; let editingBudId = null; let chart; let gaugeChart;
